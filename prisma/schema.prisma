@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["app"]
+}
+
+enum Role {
+  AUTHOR
+  ADMIN
+  @@schema("app")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  @@schema("app")
+}
+
+enum TicketPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  @@schema("app")
+}
+
+enum TicketCategory {
+  ROYALTY_PAYMENTS                @map("Royalty & Payments")
+  ISBN_METADATA_ISSUES           @map("ISBN & Metadata Issues")
+  PRINTING_QUALITY               @map("Printing & Quality")
+  DISTRIBUTION_AVAILABILITY      @map("Distribution & Availability")
+  BOOK_STATUS_PRODUCTION_UPDATES @map("Book Status & Production Updates")
+  GENERAL_INQUIRY                @map("General Inquiry")
+  @@schema("app")
+}
+
+enum AiStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  @@schema("app")
+}
+
+enum AiProvider {
+  OPENAI
+  MOCK
+  @@schema("app")
+}
+
+enum TicketEventType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNMENT_CHANGED
+  MANUAL_CLASSIFICATION_CHANGED
+  AI_CLASSIFICATION_SUCCEEDED
+  AI_CLASSIFICATION_FAILED
+  MESSAGE_ADDED
+  NOTE_ADDED
+  AUTHOR_REPLY_ACKNOWLEDGED
+  @@schema("app")
+}
+
+model User {
+  id           String   @id @db.Uuid
+  role         Role
+  loginEmail   String   @unique @map("login_email") @db.VarChar(254)
+  displayName  String   @map("display_name") @db.VarChar(200)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  authorProfile AuthorProfile?
+  assignedTickets Ticket[] @relation("TicketAssignee")
+  messages     TicketMessage[]
+  notes        TicketNote[]
+  events       TicketEvent[]
+
+  @@map("users")
+  @@schema("app")
+}
+
+model AuthorProfile {
+  authorId   String   @id @map("author_id") @db.VarChar(20)
+  userId     String   @unique @map("user_id") @db.Uuid
+  name       String   @db.VarChar(200)
+  email      String   @db.VarChar(254)
+  phone      String   @db.VarChar(50)
+  city       String   @db.VarChar(200)
+  joinedDate DateTime @map("joined_date") @db.Date
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  books      Book[]
+  tickets    Ticket[]
+
+  @@map("author_profiles")
+  @@schema("app")
+}
+
+model Book {
+  bookId                String    @id @map("book_id") @db.VarChar(20)
+  authorId              String    @map("author_id") @db.VarChar(20)
+  title                 String    @db.VarChar(500)
+  isbn                  String    @db.VarChar(50)
+  genre                 String    @db.VarChar(200)
+  publicationDate       DateTime? @map("publication_date") @db.Date
+  status                String    @db.VarChar(200)
+  mrp                   Decimal?  @db.Decimal(12, 2)
+  authorRoyaltyPerCopy  Decimal?  @map("author_royalty_per_copy") @db.Decimal(12, 2)
+  totalCopiesSold       Int       @map("total_copies_sold")
+  totalRoyaltyEarned    Decimal   @map("total_royalty_earned") @db.Decimal(12, 2)
+  royaltyPaid           Decimal   @map("royalty_paid") @db.Decimal(12, 2)
+  royaltyPending        Decimal   @map("royalty_pending") @db.Decimal(12, 2)
+  lastRoyaltyPayoutDate DateTime? @map("last_royalty_payout_date") @db.Date
+  printPartner          String?   @map("print_partner") @db.VarChar(200)
+  availableOn           String[]  @map("available_on")
+  author                AuthorProfile @relation(fields: [authorId], references: [authorId], onDelete: Restrict, onUpdate: Restrict)
+  tickets               Ticket[]
+
+  @@unique([bookId, authorId])
+  @@index([authorId])
+  @@map("books")
+  @@schema("app")
+}
+
+model Ticket {
+  id                    String          @id @default(uuid()) @db.Uuid
+  authorId              String          @map("author_id") @db.VarChar(20)
+  bookId                String?         @map("book_id") @db.VarChar(20)
+  subject               String          @db.VarChar(200)
+  description           String          @db.Text
+  status                TicketStatus    @default(OPEN)
+  assignedToId          String?         @map("assigned_to_id") @db.Uuid
+  creationRequestId     String          @map("creation_request_id") @db.Uuid
+  aiCategory            TicketCategory? @map("ai_category")
+  aiPriority            TicketPriority? @map("ai_priority")
+  manualCategory        TicketCategory? @map("manual_category")
+  manualPriority        TicketPriority? @map("manual_priority")
+  aiStatus              AiStatus        @default(PENDING) @map("ai_status")
+  aiProvider            AiProvider?     @map("ai_provider")
+  aiStartedAt           DateTime?       @map("ai_started_at") @db.Timestamptz(6)
+  aiCompletedAt         DateTime?       @map("ai_completed_at") @db.Timestamptz(6)
+  aiErrorCode           String?         @map("ai_error_code") @db.VarChar(100)
+  aiModel               String?         @map("ai_model") @db.VarChar(100)
+  aiPromptVersion       String?         @map("ai_prompt_version") @db.VarChar(100)
+  draftText             String?         @map("draft_text") @db.Text
+  draftContextHash      String?         @map("draft_context_hash") @db.VarChar(64)
+  draftProvider         AiProvider?     @map("draft_provider")
+  draftModel            String?         @map("draft_model") @db.VarChar(100)
+  draftPromptVersion    String?         @map("draft_prompt_version") @db.VarChar(100)
+  draftGeneratedAt      DateTime?       @map("draft_generated_at") @db.Timestamptz(6)
+  draftStartedAt        DateTime?       @map("draft_started_at") @db.Timestamptz(6)
+  draftErrorCode        String?         @map("draft_error_code") @db.VarChar(100)
+  resolvedAuthorReplyAt DateTime?       @map("resolved_author_reply_at") @db.Timestamptz(6)
+  authorReplySeenAt     DateTime?       @map("author_reply_seen_at") @db.Timestamptz(6)
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  author                AuthorProfile   @relation(fields: [authorId], references: [authorId], onDelete: Restrict, onUpdate: Restrict)
+  book                  Book?           @relation(fields: [bookId, authorId], references: [bookId, authorId], onDelete: Restrict, onUpdate: Restrict)
+  assignedTo            User?           @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  messages              TicketMessage[]
+  notes                 TicketNote[]
+  events                TicketEvent[]
+
+  @@unique([authorId, creationRequestId])
+  @@index([authorId, createdAt, id])
+  @@index([bookId, authorId])
+  @@index([status, createdAt, id])
+  @@index([assignedToId, status])
+  @@map("tickets")
+  @@schema("app")
+}
+
+model TicketMessage {
+  id              String   @id @default(uuid()) @db.Uuid
+  ticketId        String   @map("ticket_id") @db.Uuid
+  senderId        String   @map("sender_id") @db.Uuid
+  body            String   @db.Text
+  clientRequestId String   @map("client_request_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sender          User     @relation(fields: [senderId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([ticketId, senderId, clientRequestId])
+  @@index([ticketId, createdAt, id])
+  @@index([senderId])
+  @@map("ticket_messages")
+  @@schema("app")
+}
+
+model TicketNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  ticketId  String   @map("ticket_id") @db.Uuid
+  creatorId String   @map("creator_id") @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creator   User     @relation(fields: [creatorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([ticketId, createdAt, id])
+  @@index([creatorId])
+  @@map("ticket_notes")
+  @@schema("app")
+}
+
+model TicketEvent {
+  id        String          @id @default(uuid()) @db.Uuid
+  ticketId  String          @map("ticket_id") @db.Uuid
+  actorId   String?         @map("actor_id") @db.Uuid
+  type      TicketEventType
+  metadata  Json?           @db.JsonB
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  ticket    Ticket          @relation(fields: [ticketId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor     User?           @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([ticketId, createdAt, id])
+  @@index([actorId])
+  @@map("ticket_events")
+  @@schema("app")
+}
