@@ -1,5 +1,19 @@
 # Testing and verification
 
+## Milestone 3 verification
+
+The user reports Milestone 2 hosted setup, seed, safety checks and author/admin sign-ins all passed and approved progression. This is distinct from checks executed by the agent below.
+
+- `npm run check`: PASS (lint, TypeScript/route generation, 79 tests in 15 suites, Prisma validation, production build).
+- Ticket service/HTTP tests: owner scope, author-only creation/list, general/owned books, foreign book rejection, strict sender/role injection rejection, 401/403/404, validation/pagination/filter contracts, explicit DTOs, manual precedence, retry conflicts and concurrent creation winner recovery.
+- Reply repository tests use a mocked transaction: lock before status check, CLOSED rejection for either role, RESOLVED attention timestamp without reopening, committed retries and no duplicate events. These do not prove real PostgreSQL concurrency.
+- Production server started at localhost:3103. Initial npm port forwarding failed; direct Next CLI start succeeded.
+- `npm run test:smoke -- http://localhost:3103`: PASS, 21 anonymous actual-HTTP checks including ticket routes and protected author pages.
+- Hosted ticket test attempted twice: STOPPED at migration verification before ticket writes. Read-only `setup:safety` independently reports SELF_SIGNED_CERT_IN_CHAIN. The agent process does not have working certificate trust for these connections; the user's successful verification is not disputed. No test tickets or replies were created by these attempts. No TLS verification was disabled.
+- Browser-driven author creation/polling and actual PostgreSQL concurrent ticket writes remain unverified in this environment. Admin UI/lifecycle, AI and private-note API tests belong to later milestones; public DTO isolation is covered now.
+
+Opt-in command after the app starts: `npm run test:tickets:hosted -- development`. It checks approved project, signup, migrations, reviewed no-mail hook and restricted runtime before creating two labelled tickets/two replies. Concurrent HTTP requests exercise duplicate safety, author isolation, book checks, pagination and audit counts. Successful runs retain these records for review. It never provisions users or changes passwords/statuses. Configure CA trust in both server and test shells (for example NODE_EXTRA_CA_CERTS before Node starts); do not bypass verified TLS.
+
 ## Milestone 2 results — 23 October 2026
 
 Environment: Windows, Node 22.17.0, Next.js 16.4.2, Prisma 7.10.1, TypeScript 5.9.3. No dependency changes were required.

@@ -1,6 +1,6 @@
 # Consolidated implementation plan
 
-Status: Milestone 2 code implemented; hosted setup remains gated by email safety, runtime role and connection checks. The pasted Milestone 2 instructions supersede previous identity/password choices. Ticket and AI work await the next review.
+Status: Milestone 2 hosted setup, seeding, safety and author/admin logins verified and reviewed by the user. Milestone 3 implements author ticket creation, listing and public conversations; see TESTING for executed verification. Admin management and AI remain subsequent review gates. The pasted Milestone 2 instructions supersede previous identity/password choices.
 
 ## Delivery and acceptance
 

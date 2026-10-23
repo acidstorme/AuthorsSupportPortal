@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented in Milestone 2: authentication, current user, admin-access overview and read-only books. The implementation is covered by mocked handler/service tests; live hosted verification is pending safety/configuration checks. All ticket endpoints remain planned and currently return Next.js 404 behavior.
+Implemented: authentication, current user, admin-access overview, scoped books and Milestone 3 author tickets/public messages. Milestone 2 hosted setup/sign-ins were verified by the user. Ticket tests include mocked handler/service/transaction boundaries and anonymous actual HTTP checks; see TESTING for hosted limitations. Admin management and AI endpoints remain planned.
 
 All implemented handlers use the Node.js runtime. They validate/authorize and delegate to services/repositories. Cookie authentication is required; Bearer-only clients are not supported.
 
@@ -77,16 +77,47 @@ Complete response field names: bookId, authorId, title, isbn, genre, publication
 
 /login is shared. Successful authors go to /author; admins to /admin. Anonymous protected-page requests redirect to /login. Wrong-role page requests redirect to the user's own landing page. API authorization returns status codes rather than redirects. Unprovisioned identities are shown an access-denied login message.
 
-## Planned ticket API — not implemented
+## Implemented ticket API — Milestone 3
+
+All ticket endpoints require verified session cookies. Mutations require same-origin Origin and application/json, with a 16 KiB JSON body limit. UUID paths/request IDs are validated; unknown body/query properties return 422. Anonymous requests return 401. Missing and inaccessible tickets both return 404. Unexpected dependency failures return sanitized 503 errors using the existing error envelope.
+
+### GET /api/tickets
+AUTHOR only (admin queue comes in Milestone 4). No authorId parameter; scope comes from the principal. Query: page (1–100000, default 1), pageSize (1–100, default 20), optional status (OPEN/IN_PROGRESS/RESOLVED/CLOSED), sort (created_desc default or updated_desc); UUID descending breaks timestamp ties. Returns `{data:[<ticket>],meta:{page,pageSize,total}}`. Admin receives 403. Invalid query receives 422.
+
+### POST /api/tickets
+AUTHOR only. Body example:
+```json
+{"subject":"Book availability question","description":"Please help me check this listing.","bookId":"BK001","requestId":"11111111-1111-4111-8111-111111111111"}
+```
+bookId is nullable/optional for account-level inquiries and must belong to the current author (otherwise 422 INVALID_BOOK). Subject: trimmed 1–200 characters; description: trimmed 1–8000. requestId: client UUID, unique per author. Returns 201 `{data:<ticket>}`; identical normalized retry returns 200 with the original ticket. Changed content with the same ID returns 409 IDEMPOTENCY_CONFLICT. Client must retain its ID for retries and generate a new one for a new submission. Admin receives 403.
+
+Ticket DTO example (also used by detail/list):
+```json
+{"id":"22222222-2222-4222-8222-222222222222","bookId":"BK001","subject":"Book availability question","description":"Please help me check this listing.","status":"OPEN","category":null,"priority":null,"createdAt":"2026-10-23T12:00:00.000Z","updatedAt":"2026-10-23T12:00:00.000Z"}
+```
+Category/priority are effective manual-over-AI values, otherwise null. No notes, draft text, internal errors or private audit metadata appear. Classification is not implemented yet; creation does not call AI. Description is stored on the ticket, not duplicated as a first reply.
+
+### GET /api/tickets/:ticketId
+Owner or ADMIN, public DTO under data; validates UUID, returns 422 for malformed IDs. Author pages: /author/tickets/new and /author/tickets/:ticketId. Page APIs perform the ownership checks independently of page guards.
+
+### GET /api/tickets/:ticketId/messages
+Owner or ADMIN. Query page/pageSize as above, chronological ascending with UUID tie-breaker. Returns:
+```json
+{"data":[{"id":"33333333-3333-4333-8333-333333333333","body":"Thank you for the update.","sender":{"displayName":"Priya Sharma","role":"AUTHOR"},"createdAt":"2026-10-23T12:01:00.000Z"}],"meta":{"page":1,"pageSize":20,"total":1}}
+```
+Only public messages are queried; no private notes or sender login emails/IDs are serialized. CLOSED remains readable. Lists/counts are bounded and polled without caching; conversation/detail every 5 seconds while active, ticket list every 10 seconds. Later conversation pages contain newer replies.
+
+### POST /api/tickets/:ticketId/messages
+Owner or ADMIN. Body: `{"body":"Thank you for the update.","requestId":"11111111-1111-4111-8111-111111111111"}`. Body is trimmed 1–8000 characters. Sender comes from the verified principal; supplied sender IDs are rejected. Returns 201 `{data:<message>}` or 200 for a matching committed retry. Retry IDs are unique per ticket/sender; different content returns 409 IDEMPOTENCY_CONFLICT.
+
+New replies to CLOSED return 409 TICKET_CLOSED for both roles. An already committed matching reply may be retrieved by retry after closure without creating another message. OPEN/IN_PROGRESS/RESOLVED replies preserve status; author replies to RESOLVED set the attention timestamp for the future admin interface. Ticket lock, ownership/status recheck, message, updated timestamp and event are one transaction.
+
+## Planned admin/AI ticket API — not implemented
 
 | Method/path | Access and intended behavior |
 |---|---|
-| GET /api/tickets | Scoped pagination/filtering/sorting |
-| POST /api/tickets | AUTHOR; owned nullable book, subject, description; idempotency key |
-| GET /api/tickets/:id | Owner/admin; role-specific DTO |
 | PATCH /api/tickets/:id | ADMIN; explicit status/manual category/priority |
 | PUT/DELETE /api/tickets/:id/assignment | ADMIN; self-assignment or clear |
-| GET/POST /api/tickets/:id/messages | Owner/admin; public conversation; reject CLOSED replies |
 | GET/POST /api/tickets/:id/notes | ADMIN only; private notes |
 | GET /api/tickets/:id/events | ADMIN only; audit history |
 | POST /api/tickets/:id/classification | ADMIN; bounded explicit retry |

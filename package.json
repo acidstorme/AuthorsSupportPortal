@@ -27,6 +27,7 @@
     "demo:setup": "tsx scripts/demo-setup.ts",
     "setup:safety": "tsx scripts/check-hosted-safety.ts",
     "test:hosted": "tsx scripts/test-hosted.ts",
+    "test:tickets:hosted": "tsx scripts/test-tickets-hosted.ts",
     "test:smoke": "tsx scripts/test-local.ts",
     "postinstall": "prisma generate"
   },

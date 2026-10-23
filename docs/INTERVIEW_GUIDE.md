@@ -2,7 +2,13 @@
 
 ## Current walkthrough boundary
 
-Milestone 2 implements login/logout, server-managed sessions, verified DB roles, scoped book reads and trusted setup tools. Local tests use mocks/in-memory adapters; no live Auth or DB success is claimed while safety/configuration checks remain incomplete. Tickets and AI remain future work.
+Milestone 2 hosted setup, seed and author/admin logins were verified by the user. Milestone 3 adds author ticket creation, lists, conversations and polling. Admin lifecycle management and AI remain future work. See TESTING for independently executed checks versus user-reported results.
+
+For ticket walkthroughs, start at src/server/validation/tickets.ts, then the thin /api/tickets handlers, services/tickets.ts and repositories/tickets.ts. Explain how the principal supplies author/sender IDs, strict schemas reject impersonation, the book composite foreign key backs up service ownership checks, and explicit DTOs omit notes, drafts and AI internals. The initial description is stored on the ticket; replies are separate public messages.
+
+Creation request IDs are unique per author. Matching retries return the original resource; changed content returns 409. Concurrent unique-key collisions recover after rollback by reading the winner. Replies lock the ticket row, recheck ownership/status, deduplicate and atomically save message, timestamp and event. A replay of an already committed reply is readable even after closure; no new message is inserted. Future admin status changes must use the same row lock. RESOLVED author replies set an attention timestamp without changing status.
+
+Polling uses authenticated REST every five seconds for conversation/detail and ten seconds for lists while the tab is active. It does not create server-side subscriptions or trigger paid AI calls. Pagination bounds response size; on long conversations newer replies may be on later pages. Manual category/priority override AI independently; neither set means awaiting triage.
 
 ## Explain the request flow
 

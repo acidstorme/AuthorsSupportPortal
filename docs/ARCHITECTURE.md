@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-Milestone 2 implements authentication/authorization, session refresh, scoped book services/APIs, trusted setup scripts and minimal role-specific pages. Local tests use mocked/in-memory boundaries. Hosted setup and authenticated verification remain safety-gated. Ticket/AI paths in the target architecture below remain unimplemented.
+Milestone 2 hosted setup and logins were verified/reviewed by the user. Milestone 3 implements author ticket creation/listing, public conversation and TanStack Query polling. Admin ticket management and AI are still planned. Tests distinguish mocked integration boundaries from hosted HTTP checks.
 
 ```mermaid
 flowchart LR
@@ -21,7 +21,7 @@ flowchart LR
 
 ## Boundaries
 
-- `src/app`: routes/pages and transport adapters; Node runtime set at root. No business Route Handlers exist yet.
+- `src/app`: routes/pages and thin transport adapters; REST handlers explicitly use Node runtime.
 - `src/components`, `src/features`: presentation, typed REST clients/query hooks. Browser Supabase factory is Auth-only.
 - `src/server/auth`: server-only SSR factory, verified identity, trusted DB principal, role/ownership helpers and cookie policy.
 - `src/server/services`: lifecycle, authorization-aware orchestration, transactions and audit writes.

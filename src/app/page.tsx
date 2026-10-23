@@ -10,14 +10,14 @@ export default function Home() {
       <section className="space-y-5">
         <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Author support portal</p>
         <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">Author support,<br />built with care.</h1>
-        <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">Sign in to view your author account and linked books, or access the administrator workspace. Support tickets and AI assistance are coming in later milestones.</p>
+        <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">Sign in to view your books, create support tickets and follow your conversations with BookLeaf. Administrator ticket management and AI assistance are coming in later milestones.</p>
         <Button asChild><Link href="/login">Sign in</Link></Button>
       </section>
       <section aria-labelledby="attachment-heading" className="space-y-3">
         <h2 id="attachment-heading" className="text-sm font-semibold">Attachment preview</h2>
         <AttachmentPlaceholder />
       </section>
-      <footer className="border-t border-border pt-5 text-sm text-muted-foreground">Isolated assignment demo · No support requests available yet.</footer>
+      <footer className="border-t border-border pt-5 text-sm text-muted-foreground">Isolated assignment demo · Author support tickets are available after sign-in.</footer>
     </main>
   );
 }

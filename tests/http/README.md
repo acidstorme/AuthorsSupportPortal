@@ -1,3 +1,3 @@
 # HTTP verification
 
-M2 adds mocked handler tests in tests/unit/http-handlers.test.ts, actual anonymous HTTP checks via npm run test:smoke, and an opt-in real hosted harness via npm run test:hosted -- development. The hosted harness requires completed safety/configuration checks and a running app; it has not been executed. See docs/TESTING.md for actual results.
+Mocked handler tests cover auth and tickets using the real service/validation code. Actual anonymous checks run via npm run test:smoke. Opt-in hosted harnesses: npm run test:hosted -- development for identity/books, and npm run test:tickets:hosted -- development for ticket creation/concurrency/ownership. Both require a running app and full safety preflight. The latter retains labelled demo records; its agent execution stopped before writes at certificate validation. See docs/TESTING.md for exact results and gaps.
