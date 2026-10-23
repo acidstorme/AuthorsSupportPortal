@@ -2,12 +2,22 @@
 -- This file deliberately does not set/reset passwords. For a NEW runtime role only,
 -- set a random password in a trusted session and store it outside source control:
 -- ALTER ROLE bookleaf_runtime PASSWORD '<new randomly generated password>';
+BEGIN;
+DO $prerequisites$
+BEGIN
+  IF to_regclass('app.users') IS NULL THEN
+    RAISE EXCEPTION 'Apply the initial Prisma migration first (npm run db:migrate -- development). Do not create an empty app schema manually.';
+  END IF;
+END;
+$prerequisites$;
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'bookleaf_runtime') THEN
     CREATE ROLE bookleaf_runtime LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
   END IF;
-END $$;
+END;
+$$;
 
 GRANT CONNECT ON DATABASE postgres TO bookleaf_runtime;
 GRANT USAGE ON SCHEMA app TO bookleaf_runtime;
@@ -19,3 +29,4 @@ GRANT SELECT, INSERT ON app.ticket_messages, app.ticket_notes, app.ticket_events
 -- No runtime role changes, imports, DDL, deletions or audit rewrites.
 -- Provisioning uses separate trusted credentials in Milestone 2.
 -- Rerun explicit grants when later migrations add tables.
+COMMIT;

@@ -1,50 +1,31 @@
 # BookLeaf Author Support & Communication Portal
 
-A Next.js modular monolith using hosted Supabase Auth/PostgreSQL, Prisma, and planned OpenAI assistance.
+A Next.js App Router modular monolith using TypeScript, Tailwind/shadcn UI, Prisma, hosted Supabase Auth/PostgreSQL, Zod and TanStack Query. OpenAI integration is planned for a later milestone.
 
-## Current status: Milestone 1
+## Current status — Milestone 2
 
-Implemented: a runnable foundation page, Tailwind/shadcn-compatible UI, TanStack Query provider, environment validation, lazy Supabase/Prisma client factories, seven-table Prisma schema, initial migration, exact source JSON validation, and unit tests.
+Implemented in code: shared email/password login, logout, server-side session refresh, HTTP-only cookies, verified Auth identity and database role lookup, protected author/admin landing pages, own-book lists and scoped book APIs, trusted author provisioning/two-admin bootstrap, idempotent source import and setup verification.
 
-**Not implemented:** login/logout, provisioning, database seeding, author/admin portals, business REST endpoints, ticket services, real/mock AI behavior, deployment, or uploads. Schema foundations do not mean these features work.
+Local automated tests use mocked/in-memory integration boundaries. **Hosted provisioning and authenticated integration verification remain blocked until email safety and the runtime database role are confirmed. No demo accounts have been created by this implementation run.** See [TESTING](docs/TESTING.md) for exact executed results.
 
-The attachment placeholder is disabled and stores nothing. The assignment permits UI-only attachments; actual upload is a bonus. Future storage will use Cloudflare R2. No attachment or ticket-link tables exist.
+Ticket creation/conversations, full portals, AI classification/drafts, deployment, uploads and ticket linking are not implemented. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
 
-## Prerequisites
+## Prerequisites and first run
 
-- Node.js 22.12+ within 22.x, or 24.x. Tested on **22.17.0**, pinned in `.nvmrc`.
-- npm 10+. npm 11.5.2 encountered a resolver bug; installation succeeded using npm 11.21.1.
-- A hosted Supabase project for future integration. Prefer separate development and deployed-demo projects. **No Docker, local Supabase, or local PostgreSQL required.**
-- OpenAI API key only for future real AI mode; mock behavior is planned, not yet implemented.
-
-## Run the current project
-
-```bash
-npm ci
-npm run dev
-```
-
-Open [localhost:3000](http://localhost:3000). The foundation page needs no credentials and does not access services. Sign-in is disabled. No book or author records are displayed yet.
-
-If npm 11.5.x fails with `Cannot read properties of null (reading 'edgesOut')`:
+- Node.js 22.12+ in 22.x, or 24.x; tested runtime is 22.17.0 (`.nvmrc`).
+- npm 10+; npm 11.5.2 previously hit an installation resolver bug. A clean lockfile install succeeded using npm 11.21.1.
+- An isolated hosted Supabase project; prefer separate development and deployed-demo projects. No Docker or local Supabase/PostgreSQL.
+- OpenAI credentials are unnecessary for Milestone 2.
 
 ```bash
 npx --yes npm@11.21.1 ci
+npm run dev
 ```
 
-Use the committed lockfile for reproducibility. See [test results](docs/TESTING.md) for commands actually verified.
-
-## Local app + hosted Supabase setup
-
-This is the only supported integration workflow. Next.js runs locally; Auth and PostgreSQL run in a hosted project.
-
-1. Create an isolated development Supabase project. Obtain its project reference, API URL/key and database connection strings from the Connect panel.
-2. Disable public signup in Authentication settings. Set development Site URL to `http://localhost:3000` and permit only intended redirect URLs. Email/password will be the login method.
-3. Keep `app` out of the Data API exposed schemas. Browser clients use Supabase Auth only; database access goes through Next.js and Prisma.
-4. Copy the template, then edit `.env.local`:
+Open [localhost:3000](http://localhost:3000) or [the shared login](http://localhost:3000/login). The public page and unauthenticated login page render without service credentials; actual sign-in needs completed hosted setup.
 
 ```powershell
-# PowerShell
+# Windows PowerShell
 Copy-Item .env.example .env.local
 ```
 
@@ -53,121 +34,140 @@ Copy-Item .env.example .env.local
 cp .env.example .env.local
 ```
 
-5. Configure `DATABASE_URL` for a restricted runtime login and pooled connection. Configure `DIRECT_URL` for a trusted DDL login through a direct connection or session pooler (usually port 5432). Both require `schema=app&sslmode=verify-full`. Percent-encode password special characters.
-6. Validate and migrate:
+If you already have `.env.local`, edit it rather than overwriting its values. It is Git-ignored. Remove the obsolete singular admin-email setting and use `DEMO_ADMIN1_EMAIL` / `DEMO_ADMIN2_EMAIL`.
 
+## Hosted Supabase setup — only supported local workflow
+
+Next.js runs locally; Auth and PostgreSQL run in the selected hosted project.
+
+1. Create/select an isolated assignment project. Obtain its reference, public API URL/key and database connection details from the dashboard's Connect panel.
+2. Keep email/password sign-in enabled. Disable **public signup** and anonymous/social providers. Set development Site URL to `http://localhost:3000`; use the real HTTPS origin for the deployed demo. Disabling “Confirm email” is not an outbound-mail block.
+3. Keep `app` out of Data API exposed schemas. Browser code never accesses the database or Supabase Auth tokens directly.
+4. Bootstrap configuration needs only `APP_ENV`, `SUPABASE_PROJECT_REF` and `DIRECT_URL`. Use a trusted DDL login through the direct endpoint or session pooler (usually port 5432), matching the project reference, with `schema=app&sslmode=verify-full`. `DATABASE_URL` may remain unset or a placeholder until the runtime role exists. Auth and AI configuration are not migration prerequisites.
+5. If TLS reports an untrusted/self-signed chain, download the database CA from **Database Settings → SSL Configuration** and add `sslrootcert=<URL-encoded absolute certificate path>` to the connection strings. Alternatively set `NODE_EXTRA_CA_CERTS` in the shell before starting Node. Do not disable certificate verification. See [Supabase SSL guidance](https://supabase.com/docs/guides/platform/ssl-enforcement).
+6. Validate and apply committed migrations:
 ```bash
-npm run env:check
 npm run env:check -- development
-npm run db:validate
 npm run db:status -- development
 npm run db:migrate -- development
 ```
+This targeted environment check validates migration configuration only. Pending migrations can make status exit nonzero. Migration uses `DIRECT_URL` and `migrate deploy`, never reset/db push. Targets are positional to avoid PowerShell/npm flag forwarding problems. Existing shell variables override environment files; inspect the printed target/reference before privileged setup.
 
-`db:status` may exit nonzero for pending migrations. `db:migrate` uses **migrate deploy**, never reset or db push. The positional target must match `APP_ENV`; both DB URLs and the Auth URL must match `SUPABASE_PROJECT_REF`. Configuration validation makes no network requests.
-
-7. After migrating, review and run `scripts/sql/runtime-role.sql` in the project's SQL editor as a trusted owner. Set a random password for the new runtime role through a trusted session and use it in `DATABASE_URL`. The SQL deliberately never sets/resets passwords. Do not deploy `DIRECT_URL` to the web runtime.
-8. Run `npm run dev`. Milestone 1 has no login or database-backed page. Provisioning/seed commands will be added in Milestone 2; they do not exist yet.
-
-**Unverified:** hosted migration application, runtime-role SQL, live Auth and database connectivity. No hosted credentials were supplied. Successful offline checks are not proof of hosted setup.
-
-### Targeting the deployed demo
-
-Use a separate project and environment values. Set `APP_ENV=demo`, HTTPS `APP_URL`, and matching Supabase configuration. From a trusted shell with that environment loaded:
-
+7. In the selected project's SQL Editor, review/run [runtime-role.sql](scripts/sql/runtime-role.sql). It creates a restricted login if absent and grants required permissions, without setting/resetting passwords. For a newly created role, set a strong random database password through a trusted SQL session and put it in `DATABASE_URL`. This database password is separate from the demo application password. Existing overprivileged roles require deliberate review; the setup preflight rejects them.
+8. Configure `DATABASE_URL` with that restricted login (transaction pooler usually port 6543), matching the project reference with `schema=app&sslmode=verify-full`. Complete `APP_URL` and public Supabase URL/key, then run `npm run env:check` for runtime validation. This still rejects owner credentials. Complete the email-safety procedure below **before provisioning any confirmed demo identities**.
+9. Provide the trusted service-role/secret key and approved demo variables, then run:
 ```bash
-npm run env:check -- demo
-npm run db:migrate -- demo
+npm run auth:provision -- development
+npm run admin:bootstrap -- development
+npm run db:seed -- development
+npm run setup:verify -- development
+npm run dev
 ```
+No manual creation of twelve Auth users is required. After prerequisites and safety checks, the aggregate command performs migration deploy, author provisioning, both admins, import and verification:
+```bash
+npm run demo:setup -- development
+```
+The aggregate command does not bypass project, email, role or identity checks. First-time role/hook SQL still needs the trusted dashboard setup above.
 
-Standalone scripts use Next.js environment-file precedence; existing shell values override `.env.local`. Do not mix projects. Inspect the target/reference printed before migration. `APP_ENV` is independent of `NODE_ENV`. Targets are positional to avoid PowerShell/npm flag forwarding issues; `--target` is also accepted when invoking the script directly.
+### Required outbound-email safety
 
-No deployment or demo credentials exist yet. Add verified demo access after it works. Publish only intentionally disposable application credentials, never privileged keys or database passwords.
+The exact `email.com` identities are explicitly approved only for this isolated demo. Do not rely on email-confirmation settings, hiding reset links, default SMTP recipient limits, or invalid SMTP credentials to guarantee safety.
 
-## Environment variables
+1. After migrations/runtime-role setup, run [block-auth-emails.sql](scripts/sql/block-auth-emails.sql) in SQL Editor.
+2. In **Authentication → Hooks → Send Email**, choose PostgreSQL function `app.block_demo_auth_email`, enable and save it. The function returns an explicit rejection for every event and performs no SMTP/HTTP operation.
+3. Run `npm run setup:safety`. This read-only command checks the runtime role/permissions, installed function body/permissions and signup setting. It can directly invoke only the reviewed non-sending function.
+4. Verify separately in the dashboard that this function is the **active Send Email hook**. Function existence alone cannot prove activation. An enabled Send Email hook replaces SMTP; see [Supabase's behavior table](https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook).
+5. Only after both checks, set `DEMO_EMAIL_DISABLED_CONFIRMED=true` and `DEMO_APPROVED_PROJECT_REF` to the approved project's reference. Until then, leave the acknowledgement false.
 
-All template values are safe placeholders. Never commit `.env.local`.
+Provisioning also checks the reviewed function, restricted runtime connection, signup-disabled setting and applied migration checksums before any Auth creation. Without Management API access it cannot independently read dashboard hook activation; the explicit acknowledgement records that manual verification. No recovery/invite/OTP/email-change API is implemented or called by setup. Admin creation uses `createUser({email_confirm:true})`, never invitations. Do not trigger a recovery request to a dataset address as an exploratory test before the block is verified.
 
-| Variable | Purpose / when needed |
+### Development and deployed demo
+
+Use separate projects and credentials. For demo, set `APP_ENV=demo`, HTTPS `APP_URL`, matching Supabase URLs and that project's approval reference. Repeat the SQL/hook configuration for that project, then use the same commands with positional target `demo`. Do not deploy `DIRECT_URL`, service-role credentials, setup acknowledgements or seed passwords to the web runtime.
+
+No deployment/live demo URL is available yet. The credential table below is approved configuration, **not a claim that accounts have been provisioned or logins tested live**.
+
+## Approved demo logins
+
+All passwords come from the environment for newly created accounts; ordinary reruns never reset existing credentials.
+
+| Account | Email | Initial password | Role |
+|---|---|---|---|
+| Example author | priya.sharma@email.com | Bookleaf123 | AUTHOR |
+| Other authors | Exact emails in the supplied JSON | Bookleaf123 | AUTHOR |
+| Administrator 1 | admin1@email.com | Bookleaf123 | ADMIN |
+| Administrator 2 | admin2@email.com | Bookleaf123 | ADMIN |
+
+Authors land at `/author` and see their identity and books. Both admins land at `/admin` with identical authorization and no author profile. These intentionally public disposable credentials must never be reused with real user data.
+
+## Environment reference
+
+| Variable | Purpose |
 |---|---|
-| `APP_ENV` | `development`, `demo`, `test`; required for integration checks and migration targeting |
-| `APP_URL` | Local origin or HTTPS demo origin; future cookie/origin policy |
-| `SUPABASE_PROJECT_REF` | Twenty-letter hosted project reference |
-| `NEXT_PUBLIC_SUPABASE_URL` | Hosted Auth URL matching the reference |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe publishable key; legacy anon key accepted |
-| `DATABASE_URL` | Restricted runtime PostgreSQL connection |
-| `DIRECT_URL` | Trusted direct/session migration connection; migrations only |
-| `AI_MODE` | `mock` default or `openai`; validated now, behavior planned |
-| `OPENAI_MODEL` | Planned default `gpt-4o-mini` |
-| `OPENAI_API_KEY` | Server-only; validator requires it in openai mode |
-| `SUPABASE_SERVICE_ROLE_KEY` | Future trusted provisioning only; not needed by web runtime |
-| `DEMO_AUTHOR_PASSWORD` | Future shared password for newly created synthetic authors |
-| `DEMO_ADMIN_EMAIL` | Future separate synthetic admin identity |
-| `DEMO_ADMIN_PASSWORD` | Future separate admin password |
+| APP_ENV | development, demo or test; explicit setup target |
+| APP_URL | Local app origin or deployed HTTPS origin; cookie/origin policy |
+| SUPABASE_PROJECT_REF | Expected hosted project reference |
+| NEXT_PUBLIC_SUPABASE_URL | Project API/Auth URL matching reference |
+| NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY | Public publishable key; legacy anon key accepted |
+| DATABASE_URL | Restricted bookleaf_runtime PostgreSQL connection |
+| DIRECT_URL | Trusted migration/provisioning DB connection; standalone tooling only |
+| SUPABASE_SERVICE_ROLE_KEY | Trusted Auth Admin API key; scripts only |
+| DEMO_AUTHOR_PASSWORD | Approved initial author password; example defaults to Bookleaf123 |
+| DEMO_ADMIN1_EMAIL | First admin identity; default admin1@email.com |
+| DEMO_ADMIN2_EMAIL | Second admin identity; default admin2@email.com |
+| DEMO_ADMIN_PASSWORD | Approved initial admin password; example defaults to Bookleaf123 |
+| DEMO_APPROVED_PROJECT_REF | Explicit approval of an isolated demo project |
+| DEMO_EMAIL_DISABLED_CONFIRMED | false until hook installation AND dashboard activation verified |
+| AI_MODE | mock default or openai; AI behavior not implemented yet |
+| OPENAI_MODEL | Planned default gpt-4o-mini |
+| OPENAI_API_KEY | Required by validation only in openai mode; no M2 AI calls |
 
-Only the two `NEXT_PUBLIC_*` values may enter browser bundles. Restart development after environment changes; rebuild for changed public values. The service-role key and demo passwords must stay out of web deployment variables.
-
-## Source data and account safety
-
-`data/bookleaf-sample.json` is a byte-for-byte copy of the supplied file: ten authors and eighteen books, including two in production. IDs, contact fields, dates, nulls, financial snapshots and platform arrays are preserved.
-
-All supplied emails use **email.com**, which is not reserved and could identify real people. Future trusted provisioning will use `auth001@bookleaf-demo.example` through `auth010@bookleaf-demo.example`, while preserving original `author_profiles.email`. No accounts have been created and no emails sent.
-
-```bash
-npm run data:validate
-```
-
-Future setup must be idempotent, stop on identity mapping conflicts, recover across separate Auth/Prisma operations, and never reset existing passwords during ordinary seed runs.
+Only public Supabase URL/key are browser-safe; the M2 client does not instantiate a browser Auth SDK. Tokens are HTTP-only cookies, never returned by login/me APIs or stored in browser localStorage. Do not log secrets or commit environment files. Restart after changes; public build-time changes require a rebuild.
 
 ## Commands
 
 | Command | Behavior |
 |---|---|
-| `npm ci` | Locked installation and Prisma generation |
-| `npm run dev` | Development server |
-| `npm run db:generate` | Generate ignored Prisma client offline |
-| `npm run db:validate` | Validate schema offline |
-| `npm run env:check` | Validate runtime config without network access |
-| `npm run env:check -- development` | Also validate migration config |
-| `npm run db:status -- development` | Read hosted migration status |
-| `npm run db:migrate -- development` | Apply committed hosted migrations |
-| `npm run data:validate` | Validate source JSON/checksum; no writes |
-| `npm run lint` | ESLint with zero warnings allowed |
-| `npm run typecheck` | Prisma/Next generation and TypeScript validation |
-| `npm test` / `npm run test:watch` | Unit tests / watch mode |
-| `npm run build` / `npm run start` | Build / serve production locally |
-| `npm run check` | Lint, types, tests, schema validation and build |
+| npm run env:check | Validate runtime configuration, no connections |
+| npm run env:check -- development | Validate migration-only configuration and explicit target/project; no runtime credentials required |
+| npm run env:check:demo -- development | Validate privileged demo settings/acknowledgements without network calls |
+| npm run setup:safety | Read-only runtime-role/email-function/signup diagnostics; no accounts or mail |
+| npm run db:generate / db:validate | Offline Prisma generation / schema validation |
+| npm run db:status -- development | Hosted migration status |
+| npm run db:migrate -- development | Apply committed migrations |
+| npm run auth:provision -- development | Exactly ten source-email authors, safely restartable |
+| npm run admin:bootstrap -- development | Exactly two configured administrators, no promotions |
+| npm run db:seed -- development | Idempotent exact profile/book import; ticket records untouched |
+| npm run setup:verify -- development | Auth/app counts, roles, UUID mappings, every source field |
+| npm run demo:setup -- development | Guarded aggregate setup |
+| npm run data:validate | Original JSON schema and byte checksum |
+| npm run lint / typecheck / test | Local lint / types / deterministic tests |
+| npm run check | Lint, types, unit tests, schema validation, build |
+| npm run test:hosted -- development | Opt-in live HTTP tests against a running app and completed setup; no account creation |
+| npm run test:smoke | Anonymous local HTTP checks against a running app; no hosted calls |
+| npm run dev | Local development server |
+| npm run build / start | Build / run production locally |
 
-```bash
-npm run build
-npm run start
-```
+Hosted HTTP tests use Playwright's request client and need no downloaded browser binary. They verify all twelve configured logins, role/landing behavior, HTTP-only cookies, author/admin isolation, source book ownership, same-origin protection and logout. They create sessions only. No passing hosted result is claimed until run.
 
-HTTP, integration and Playwright suites are planned; no passing results or commands are advertised before implementation.
+## Troubleshooting and limits
 
-## Troubleshooting
-
-- **Invalid environment:** replace every `replace-me` placeholder before integration checks. The scaffold page itself needs no variables.
-- **Project mismatch:** API URL, pooler username/direct hostname and project reference must agree; copy from the same project's Connect panel.
-- **IPv6/network errors:** use hosted session pooling on port 5432 for migrations if direct connectivity needs unavailable IPv6.
-- **TLS errors:** preserve verification; check hostname and local CA trust. If required, configure `NODE_EXTRA_CA_CERTS` with the trusted Supabase CA file. Do not disable certificate verification.
-- **Password errors:** database passwords differ from API keys. Encode password characters; custom pooler usernames include the project reference.
-- **Permission denied:** apply migrations through the DDL connection, then review runtime-role grants. Keep runtime credentials separate from the database owner.
-- **Migration failure:** inspect the actual failing statement. The migration expects Supabase's existing `auth.users`, `anon` and `authenticated`. Never use reset against development/demo data.
-- **npm resolver crash:** use the newer npm command above; do not rewrite the lockfile with an incompatible resolver.
-- **Windows sandbox EPERM/path errors:** this environment required elevated execution for Next.js native path resolution and Vitest temporary-file renames. Successful verification used normal filesystem access afterward.
-- **Audit findings:** five high findings affect a dev-only Next ESLint/glob/braces chain; production audit is clean. No patched braces release existed at verification. See TESTING; do not run `audit fix --force` blindly.
+- **Incomplete configuration:** template values cannot be used for integration. APIs return sanitized 503 for server configuration failures.
+- **Project mismatch:** Auth URL, direct host/pooler username and reference must agree. Setup requires explicit target and project acknowledgement.
+- **Restricted-role errors:** the runtime URL must use bookleaf_runtime, not postgres; inspect role SQL and privileges. Setup credentials remain separate.
+- **Schema app does not exist:** apply the initial migration first, then runtime-role.sql, then block-auth-emails.sql. Do not create an empty schema manually or skip Prisma migration history. Use `npm run env:check -- development` before migrating; the bare `npm run env:check` validates runtime credentials after role setup. Migration never requires `DATABASE_URL`.
+- **TLS trust:** add the downloaded Supabase CA; keep hostname and CA verification. Direct IPv6 unavailable? Use the hosted session pooler on port 5432.
+- **Existing email conflict:** an unmarked Auth identity is never adopted just by email. Use a clean isolated project or investigate ownership; do not silently elevate, delete or reset it.
+- **Partial provisioning:** rerun the same guarded command. Trusted Auth metadata permits reconciliation after the DB step failed. No account deletion is used as compensation.
+- **Existing password changed:** ordinary setup does not restore demo defaults. Investigate deliberately; hosted login tests may correctly fail.
+- **Login throttling:** provider rate limits may return 429. Avoid repeated live credential attempts; local tests use mocks.
+- **Logout:** clears all local session-cookie chunks and revokes that refresh session. Already issued access JWTs may remain valid until expiry; this is not an application-wide immediate revocation system.
+- **Windows sandbox:** native Next path resolution and Vitest cache operations required elevated tool execution during verification.
+- **Dependency audit:** M1 recorded five high dev-only Next ESLint/glob/braces findings and zero production findings. No new dependency was added in M2; review current advisories before delivery.
+- **Deferred:** tickets, AI, R2 attachments, ticket links, full accounting, password recovery/self-registration, deployment. No ticket isolation claim is made before ticket APIs exist.
 
 ## Documentation
 
-- [Revised implementation plan](docs/IMPLEMENTATION_PLAN.md)
-- [Architecture, ER diagram and security](docs/ARCHITECTURE.md)
-- [API planned contracts](docs/API.md)
-- [AI design](docs/AI_DESIGN.md)
-- [Testing, results and gaps](docs/TESTING.md)
-- [Decisions and alternatives](docs/DECISIONS.md)
-- [Interview guide](docs/INTERVIEW_GUIDE.md)
-- [One-page write-up draft](docs/WRITEUP.md)
+[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [AI design](docs/AI_DESIGN.md) · [Tests/results](docs/TESTING.md) · [Decisions](docs/DECISIONS.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [One-page write-up draft](docs/WRITEUP.md)
 
-No external workflow is marked complete before it has been tested. Milestone 2 begins only after Milestone 1 review.
-
+Milestone 3 begins only after Milestone 2 review.

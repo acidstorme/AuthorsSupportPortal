@@ -25,6 +25,10 @@ export const runtimeEnvSchema = publicEnvSchema.extend({
   if (!databaseMatchesProject(env.DATABASE_URL, env.SUPABASE_PROJECT_REF)) {
     ctx.addIssue({ code: "custom", path: ["DATABASE_URL"], message: "Database must match SUPABASE_PROJECT_REF" });
   }
+  const databaseUser = safeUrl(env.DATABASE_URL)?.username;
+  if (databaseUser !== "bookleaf_runtime" && databaseUser !== `bookleaf_runtime.${env.SUPABASE_PROJECT_REF}`) {
+    ctx.addIssue({ code: "custom", path: ["DATABASE_URL"], message: "Runtime connection must use bookleaf_runtime, not the database owner" });
+  }
   if (env.AI_MODE === "openai" && (!env.OPENAI_API_KEY || env.OPENAI_API_KEY.includes("replace-me"))) {
     ctx.addIssue({ code: "custom", path: ["OPENAI_API_KEY"], message: "Required for AI_MODE=openai" });
   }
@@ -46,12 +50,44 @@ export function parseRuntimeEnv(source: NodeJS.ProcessEnv) {
 }
 
 export function parseMigrationEnv(source: NodeJS.ProcessEnv, target: string | undefined) {
-  const runtime = parseRuntimeEnv(source);
-  const directUrl = databaseUrlSchema.parse(source.DIRECT_URL);
-  if (target !== runtime.APP_ENV) throw new Error("Pass an explicit target matching APP_ENV (development, demo, or test).");
-  if (!databaseMatchesProject(directUrl, runtime.SUPABASE_PROJECT_REF)) throw new Error("DIRECT_URL does not match SUPABASE_PROJECT_REF.");
-  if (new URL(directUrl).hostname.endsWith(".pooler.supabase.com") && new URL(directUrl).port === "6543") {
+  // Bootstrap must work before the runtime login, Auth configuration or AI keys exist.
+  const migration = z.object({
+    APP_ENV: z.enum(["development", "demo", "test"]),
+    SUPABASE_PROJECT_REF: z.string().regex(/^[a-z]{20}$/, "Expected a 20-letter hosted project reference"),
+    DIRECT_URL: databaseUrlSchema,
+  }).parse(source);
+  if (target !== migration.APP_ENV) throw new Error("Pass an explicit target matching APP_ENV (development, demo, or test).");
+  if (!databaseMatchesProject(migration.DIRECT_URL, migration.SUPABASE_PROJECT_REF)) throw new Error("DIRECT_URL does not match SUPABASE_PROJECT_REF.");
+  const directUrl = new URL(migration.DIRECT_URL);
+  if (directUrl.hostname.endsWith(".pooler.supabase.com") && directUrl.port === "6543") {
     throw new Error("DIRECT_URL must use a direct or session connection, not the transaction pooler on port 6543.");
   }
-  return { ...runtime, DIRECT_URL: directUrl };
+  return migration;
+}
+
+const demoSecretsSchema = z.object({
+  SUPABASE_SERVICE_ROLE_KEY: nonPlaceholder.min(20),
+  DEMO_AUTHOR_PASSWORD: z.string().min(8).max(200),
+  DEMO_ADMIN1_EMAIL: z.email().transform((value) => value.toLowerCase()),
+  DEMO_ADMIN2_EMAIL: z.email().transform((value) => value.toLowerCase()),
+  DEMO_ADMIN_PASSWORD: z.string().min(8).max(200),
+  DEMO_APPROVED_PROJECT_REF: z.string().regex(/^[a-z]{20}$/),
+  DEMO_EMAIL_DISABLED_CONFIRMED: z.literal("true"),
+});
+
+export function parseDemoEnv(source: NodeJS.ProcessEnv, target: string | undefined) {
+  const migration = parseMigrationEnv(source, target);
+  // Provisioning still requires the fully configured restricted runtime and Auth settings.
+  const runtime = parseRuntimeEnv(source);
+  const demo = demoSecretsSchema.parse(source);
+  if (demo.DEMO_APPROVED_PROJECT_REF !== migration.SUPABASE_PROJECT_REF) throw new Error("Demo provisioning is not approved for this project. Set DEMO_APPROVED_PROJECT_REF deliberately.");
+  if (demo.DEMO_ADMIN1_EMAIL === demo.DEMO_ADMIN2_EMAIL) throw new Error("The two administrator emails must be distinct.");
+  // A legacy JWT embeds its project reference. New sb_secret keys are verified by the Admin API.
+  if (demo.SUPABASE_SERVICE_ROLE_KEY.startsWith("eyJ")) {
+    try {
+      const payload = JSON.parse(Buffer.from(demo.SUPABASE_SERVICE_ROLE_KEY.split(".")[1], "base64url").toString("utf8"));
+      if (payload.role !== "service_role" || payload.ref !== migration.SUPABASE_PROJECT_REF) throw new Error();
+    } catch { throw new Error("The provisioning key must be a service-role key for the approved project."); }
+  } else if (!demo.SUPABASE_SERVICE_ROLE_KEY.startsWith("sb_secret_")) throw new Error("Use a trusted Supabase service_role JWT or sb_secret key.");
+  return { ...migration, ...runtime, ...demo };
 }

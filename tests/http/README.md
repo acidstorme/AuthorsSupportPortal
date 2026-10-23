@@ -1,3 +1,3 @@
-# Planned HTTP tests
+# HTTP verification
 
-Not implemented or executed in Milestone 1. Run Next.js on a test port and exercise real `/api/...` endpoints with fetch, cookies and hosted test Auth identities. Cover ownership, role checks, validation, error contracts and pagination.
+M2 adds mocked handler tests in tests/unit/http-handlers.test.ts, actual anonymous HTTP checks via npm run test:smoke, and an opt-in real hosted harness via npm run test:hosted -- development. The hosted harness requires completed safety/configuration checks and a running app; it has not been executed. See docs/TESTING.md for actual results.

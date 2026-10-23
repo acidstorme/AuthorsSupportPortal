@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-Milestone 1 provides schema, migration, environment validation and integration factories. The diagram below describes the approved target architecture. Authentication enforcement, services, repositories and ticket APIs are not implemented yet.
+Milestone 2 implements authentication/authorization, session refresh, scoped book services/APIs, trusted setup scripts and minimal role-specific pages. Local tests use mocked/in-memory boundaries. Hosted setup and authenticated verification remain safety-gated. Ticket/AI paths in the target architecture below remain unimplemented.
 
 ```mermaid
 flowchart LR
@@ -23,14 +23,14 @@ flowchart LR
 
 - `src/app`: routes/pages and transport adapters; Node runtime set at root. No business Route Handlers exist yet.
 - `src/components`, `src/features`: presentation, typed REST clients/query hooks. Browser Supabase factory is Auth-only.
-- `src/server/auth`: cookie-aware server factory; later verified identity, role and ownership helpers.
+- `src/server/auth`: server-only SSR factory, verified identity, trusted DB principal, role/ownership helpers and cookie policy.
 - `src/server/services`: lifecycle, authorization-aware orchestration, transactions and audit writes.
 - `src/server/repositories`, `src/server/db`: scoped queries and lazy Prisma singleton. `server-only` prevents browser imports.
 - `src/server/ai`: later providers, prompts, KB selection and validation.
 - `src/shared`: public-safe configuration, DTOs and utilities. Client modules do not import server runtime configuration.
 - `scripts`: standalone trusted operations. Next.js environment precedence is shared by scripts and Prisma config.
 
-No unused service/repository abstractions are manufactured. Boundary README files establish the structure until the actual feature is implemented.
+Auth/book services and repositories are implemented. Ticket and AI boundaries remain placeholders. The browser Auth factory was removed: client components call REST endpoints without reading token cookies.
 
 ## Entity relationships
 
@@ -79,7 +79,7 @@ The migration adds Auth FK, checks, required array constraint, expression/partia
 
 ## Authentication and authorization model
 
-Planned: shared email/password login; verified server identity through Supabase; `app.users.role` looked up by that UUID; redirect based on trusted role. No public signup or user-controlled role endpoint. Admins originate only in trusted bootstrap. An Auth user without an application user cannot access business data.
+Shared email/password login verifies identity with Supabase getUser(), then loads app.users.role by Auth UUID and returns a token-free principal/redirect. No signup or role-management endpoint exists. An Auth user without a complete app mapping is denied. Role is never inferred from Auth metadata.
 
 Authors query only their own profile/books/tickets. Sender/author identities come from the verified principal. Admins see all tickets and are the only users who change status, notes, classification and assignment. Assignee/creator role checks belong in services because ordinary foreign keys cannot validate another row's role.
 
@@ -87,7 +87,21 @@ Return explicit DTOs. Author payloads never include notes, internal events, cach
 
 Browser publishable keys access Auth, not application tables. Migration revokes schema/table access from PUBLIC, anon and authenticated; keep app out of Data API exposed schemas. The reviewed runtime-role SQL grants read-only author/book/user access and only required ticket/conversation writes. It grants no DDL, role modification or audit updates. Runtime RBAC still must be enforced in the backend; Prisma does not automatically run as the Supabase user's RLS identity.
 
-Future sessions use the Supabase SSR cookie adapter and refresh proxy. Mutation origin checks, no shared authenticated response caching, secure production cookies, input limits and text-safe rendering are required. M1 has only factory code; it does not provide an authenticated page.
+Sessions use SSR HTTP-only, SameSite=Lax cookies, Secure on HTTPS. Proxy refreshes sessions before rendering, forwards changed cookies into the request and copies chunks/deletions onto the response. It does not authorize access: pages/APIs independently verify identity and DB role. Read-only Server Components rely on proxy cookie persistence. Login/logout require the configured Origin; JSON input is strict and capped at 16 KiB. API responses are no-store. Tokens never enter API responses or browser localStorage.
+
+Logout revokes the current refresh session and clears all cookie chunks even on remote failure. Already-issued JWTs may remain valid until expiry; this is not immediate global revocation. The author page uses scoped queries. Admin overview requires ADMIN. Book detail uses a query containing ownership; invisible books return 404 and author-supplied author filters return 403. Future ticket services must reuse these policies.
+
+## Trusted provisioning and source import
+
+Milestone 2 explicitly approves the exact ten email.com logins and two configured admins for the isolated demo, superseding aliases. These are not reserved addresses. Setup reads initial passwords from environment, and administrators have no profiles. Both share identical ADMIN permissions.
+
+Standalone scripts alone import service-role credentials and DIRECT_URL. They check target/reference approval, email-block acknowledgement, signup disabled, migration checksums, installed reviewed no-mail function and restricted runtime permissions before Auth creation. The Send Email hook must also be activated in the dashboard: function presence cannot prove activation. Provisioning remains blocked while acknowledgement is false.
+
+New confirmed Auth users receive a server-controlled app_metadata.bookleaf_demo marker (version/project/kind/source ID). It supports reconciliation, not runtime authorization. Existing matching emails without that exact marker are rejected. Inventory checks prevent unexpected accounts, role promotion, UUID/profile reassignment and changed book owners.
+
+Auth creation precedes a short serializable user/profile transaction. After DB failure, rerun reuses the marked identity and completes its mapping, without resetting passwords or deleting accounts. Source import separately upserts eighteen books and exact profile fields, never tickets/messages/notes/events. Verification checks twelve Auth/app users, ten profiles, two admins without profiles, all relationships and every source value including Decimal equality, dates, nulls and array order.
+
+users.id is the Auth security identity; author_profiles.author_id retains the original business key referenced by books. These identifiers deliberately serve different purposes.
 
 ## Planned data flows and consistency
 

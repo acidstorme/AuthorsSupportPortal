@@ -1,3 +1,3 @@
 # Planned integration tests
 
-Not implemented or executed in Milestone 1. Use a separate hosted test project/database. Cover migrations, ownership constraints, seed idempotency/recovery and transactional lifecycle behavior. Never run destructive test setup on development or demo data.
+M2 deterministic tests exercise provisioning/seed orchestration with in-memory adapters. They do not prove real PostgreSQL constraints or Supabase behavior. The real setup verifier and HTTP harness remain safety-gated. Use a separate explicitly approved hosted test project for destructive fixtures; never reset demo data. Ticket transaction tests are deferred.

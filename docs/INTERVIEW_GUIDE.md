@@ -1,78 +1,66 @@
 # Interview guide
 
-## Current demonstration boundary
+## Current walkthrough boundary
 
-Milestone 1 is a foundation, not a finished portal. You can demonstrate the scaffold, schema/migration, environment guards, source validation and unit tests. Login, provisioning, ticket flows and AI are **planned**. Do not claim to have demonstrated them until later milestones pass their tests.
+Milestone 2 implements login/logout, server-managed sessions, verified DB roles, scoped book reads and trusted setup tools. Local tests use mocks/in-memory adapters; no live Auth or DB success is claimed while safety/configuration checks remain incomplete. Tickets and AI remain future work.
 
-## Opening explanation
+## Explain the request flow
 
-“BookLeaf needs a support portal where authors see only their own information and operations staff can manage tickets. I chose a single Next.js application with a REST boundary and separate business modules. Supabase supplies identity and PostgreSQL; Prisma manages application data. AI will assist triage and draft replies, while admins remain responsible for final decisions and sending.”
+Browser form -> /api/auth/login -> strict Zod/origin checks -> auth service -> Supabase email/password sign-in -> getUser verification -> app.users lookup by UUID -> explicit principal DTO -> role-specific landing. JWTs/refresh tokens are set as HTTP-only cookies, never returned as JSON.
 
-Explain why the four-day constraint favors simple infrastructure and explicit correctness: one application deployment, polling, a small fixed KB and bounded awaited calls. The architecture remains modular even without separate services.
+On later requests, proxy refreshes cookie sessions and forwards updated cookies into the request before pages render. Proxy is not the authorization boundary. Each protected page/API verifies Auth and reads the trusted application role. Server Components are cookie-read-only; writable Route Handlers and proxy persist changes. Logout clears all cookie chunks and revokes the current refresh session; already-issued JWT lifetime remains a limitation.
 
-## Suggested code walkthrough
+The browser Auth SDK was removed because it would need access to token storage. Server-only SSR clients plus REST maintain the required HTTP-only boundary. TanStack Query cache is cleared when accounts change or log out.
 
-1. `package.json`: supported runtime, lockfile, generation before types/build, explicit checks and migration wrappers.
-2. `src/app`: minimal page and provider wiring. Root runtime is Node. There is deliberately no fake portal/login.
-3. `src/server/config`: lazy runtime validation, shared `.env` loading for scripts, target/project guards. `src/shared/config` contains only browser-safe public configuration.
-4. `prisma/schema.prisma`: users/profile split, exact book fields, lifecycle enums, nullable general-ticket book reference, public/private separation, audit model and cache fields.
-5. Initial migration: generated DDL plus manually reviewed Auth FK, checks, indexes and schema permissions. Explain why those custom clauses must survive future changes.
-6. Supabase factories and lazy Prisma adapter: server-only integration boundaries, no credentials accessed by the public scaffold.
-7. Dataset copy/checksum and tests: proof of preserving the exact input, including placeholder ISBNs and in-production nulls.
-8. Documentation: point out verification gaps and the next milestone instead of presenting planned features as finished.
+## Useful code walkthrough
 
-## Database questions to prepare for
+1. package.json: setup targets, tests and offline generation/build.
+2. src/server/config: URL/project/role checks; runtime configuration is separate from privileged setup credentials.
+3. src/server/auth: cookie policy, Supabase gateway, principal resolution and pure role/ownership policies.
+4. src/proxy.ts: refresh only, no role inferred from cookies.
+5. src/server/services and repositories: orchestration vs scoped DB query. Book detail uses an ownership predicate rather than loading then relying on a frontend check.
+6. scripts/lib/provisioning.ts: desired identities, server marker, preflight and recoverable Auth-then-DB steps.
+7. scripts/lib/adapters.ts: actual Admin API and serializable Prisma mapping writes.
+8. scripts/lib/seed.ts and verify.ts: idempotent source import and exact round-trip checks.
+9. prisma schema/migration: UUID vs source keys, Decimal/DATE, composite ownership FK, private/public separation.
+10. tests and documentation: distinguish deterministic tests from opt-in live HTTP verification.
 
-**Why users and author_profiles?** Both roles authenticate as users. Author business identity retains AUTH001-style IDs independently of the Auth UUID. Admins need no author profile. A unique profile user ID makes the relationship one-to-one.
+## Auth UUID versus original author ID
 
-**How do you bind Auth to application data?** Supabase creates the Auth UUID; the app uses that same UUID as users PK. SQL references Supabase-owned auth.users. Future provisioning can recover if Auth succeeds but the Prisma transaction fails; the two systems are not assumed transactional together.
+Supabase UUID is a security identity. AUTH001 is a supplied business identifier. app.users.id equals the Auth UUID and is referenced by the author profile's unique user_id. author_profiles.author_id preserves AUTH001, and books reference that original ID. Admins are users without profiles. The DB Auth foreign key binds these identities without Prisma managing Supabase's auth schema.
 
-**Why synthetic logins?** Source contacts use email.com, which could be real. Auth aliases under `.example` avoid contacting or claiming those identities; original contacts stay exact in profiles. New accounts share one configured demo author password, separate from admin, with no ordinary password resets.
+Auth metadata is never a runtime role source. A user cannot set ADMIN through sign-in JSON, editable metadata or frontend navigation. A valid Auth identity without a complete application row is denied. Both configured admins receive the same ADMIN guards; bootstrap never promotes an author.
 
-**How is cross-author book assignment prevented?** Service validates the selected book against the trusted author identity, then the composite `(book_id, author_id)` FK supplies a second safeguard. A null book remains valid for account-level queries.
+## Why these demo credentials?
 
-**Why Decimal and DATE?** Currency arithmetic must not use binary floating point in persisted business values. A publication date is a calendar date and should not shift through timezones. Application events need absolute timestamps, so they use TIMESTAMPTZ. The supplied financial snapshots are not sufficient to build a complete accounting system.
+The user explicitly approved exact email.com source logins, two admin identities and environment-owned shared initial passwords for the isolated assignment. This supersedes the safer alias proposal. These are deliverable domains, so confirmation toggles alone are insufficient. Setup requires explicit project approval, signup disabled and a non-sending Send Email hook with separately verified activation.
 
-**Why are ISBNs not validated as genuine ISBNs?** The supplied strings intentionally contain placeholder X characters. Strict ISBN validation would reject the authoritative dataset.
+In production use real identity ownership verification, individual private credentials, appropriate recovery/MFA, least-privilege operational access, abuse controls and audited account lifecycle. Public shared demo passwords are not a production authentication policy.
 
-**What is indexed?** Author-owned lists, status/age and assignment queues, stable time/ID conversation cursors, effective classification expressions and unseen resolved replies. More indexes are justified by measured queries, not speculation.
+## Idempotent provisioning and failure recovery
 
-## Security explanation
+Before writing, validate source bytes, target/project, migration checksums, email controls, restricted runtime permissions and current Auth/app inventory. Existing email alone proves nothing: require the exact server-controlled bookleaf_demo marker and compatible UUID, source ID, role and profile mapping.
 
-The future backend verifies Supabase identity, then loads the application role. Cookie contents, client metadata, request author IDs and frontend redirects cannot authorize access. Authors get scoped queries and explicit DTOs; admins have broader ticket access. Notes/drafts/internal audit data cannot enter author DTOs.
+If Auth creation succeeds but DB mapping fails, rerun finds the marked account and completes the mapping. Auth and Prisma cannot share a transaction. New user/profile writes are serializable; ordinary reruns update source/display values only after identity checks, never passwords/roles/UUID ownership. A lost Auth response is reconciled on rerun. Unexpected accounts or changed owners stop setup without deleting them.
 
-The database schema is not exposed through Supabase's Data API. An Auth publishable key is not a database password. The runtime DB role has no role-changing/DDL/import privileges; trusted provisioning and migration credentials stay outside the web runtime. Prisma's service connection does not automatically implement Supabase per-user RLS.
+Books upsert by original ID after validating author mappings. The import never deletes ticket data. Verification checks 12 Auth/app users, 10 profiles, 2 admins without profiles, all 18 books and every original field, including platform array order. Mocks validate orchestration; real constraints need live integration tests.
 
-Session refresh, origin checks, secure production cookies and protected routes arrive with auth implementation. The M1 client factory alone does not implement authentication or authorization. Closed-ticket rules and sender integrity must be enforced server-side even if the UI disables a control.
+## Ownership and database choices
 
-## Concurrency examples to defend
+Authors get authorId only from the trusted principal. List/detail repositories include that scope. Admin filters are guarded; invisible book detail returns 404. Current ticket APIs do not exist, so ticket isolation is an upcoming test obligation.
 
-- An admin closes a ticket while an author replies: both operations serialize briefly on the ticket row, so a reply cannot slip in after close. No long transaction spans an AI call.
-- A client retries after losing a response: a unique request key returns the original record; changed payload for the same key is a conflict.
-- An admin overrides HIGH while AI returns LOW: separate fields and narrow AI writes preserve the override.
-- React Strict Mode or two admins request a draft: persisted cache/fingerprint plus a conditional in-flight timestamp claim avoids repeated paid work.
-- An admin acknowledges a resolved-ticket reply while a newer reply arrives: acknowledgement uses the observed timestamp, preserving new attention.
+The app schema is not exposed through Supabase Data API. Runtime DB role cannot change users/roles, import source data, perform DDL or rewrite events. Prisma connects as this service role, not the individual Supabase Auth user's RLS identity; backend policy remains essential.
 
-These are planned transaction-service behaviors, not features validated by the M1 schema alone. No global versioning framework or extra attempt-management table is needed.
+Decimal avoids persisted binary floating-point money. DATE preserves calendar dates without timezone shifts; TIMESTAMPTZ records instants. Source placeholder ISBNs must not be rejected by genuine ISBN validation. Production nulls must not become zeros/dates. Aggregate royalties cannot establish bank linkage, payout eligibility or per-platform accounting.
 
-## AI explanation for later milestones
+## Upcoming ticket and AI discussion
 
-Two independent capabilities: structured triage and grounded draft assistance. Persist the ticket first; bounded classification failure leaves manual triage. A cached draft is internal text, never a message until an admin explicitly submits final edited content.
+Future ticket services retain OPEN creation, explicit admin status changes, no status effects from messages/assignment, resolved replies without reopening, closed reply rejection and private notes separate from messages. Short row serialization protects close/reply races; unique request keys protect retry duplication. No global version framework or queue.
 
-Use only scoped ticket/book facts and relevant KB sections. The model cannot know bank linkage, payment completion, stock re-sync, escalation completion or actual production delay causes from this dataset. Describe policies and proposed next steps without inventing those facts. Shape validation is not factual validation; malicious ticket text is untrusted input, not a new system instruction.
+AI classification follows persistence and uses bounded structured output; manual fields always win. Drafts use a persisted context fingerprint/cache and explicit review/send. A draft never performs an escalation, payment or stock re-sync. Only verified facts and relevant KB policies can support such language. Shape validation does not prove factual truth; human review reduces but does not eliminate risk. Mock provenance must be visible.
 
-Explain output/context budgets, model choice, timeout/rate-limit/refusal handling, cache reuse, mock provenance and opt-in live evaluation. A fixed small KB does not justify vector retrieval. Manual review is necessary but does not eliminate hallucinations.
+## Tests and trade-offs to defend
 
-## Testing and trade-offs
+Current deterministic suites cover role denial, missing mappings, origin/validation errors, HTTP handler contracts, book scoping, seed preservation, identity conflicts, two-admin parity and provisioning restart/idempotency. test:hosted uses a real running app and hosted services, inspects HTTP-only cookies and all twelve configured logins, but must not be called a passing integration result until executed.
 
-M1 tests validate configuration safeguards and exact data. Later layers must test real PostgreSQL constraints/transactions, HTTP cookies/roles, and two-session polling with Playwright. Mock AI makes CI deterministic; live AI quality needs a separately recorded evaluation.
-
-Hosted-only setup simplifies reviewer prerequisites but relies on internet and service access. Short awaited classification is reliable within a bounded serverless request but adds latency. Polling is adequate here but may need reconsideration at larger concurrent-user volume. Deferred attachments will use private R2 storage with server-authorized signed operations; links cannot expand ticket access.
-
-## Honest limitations to mention
-
-- No external services, migration application, accounts or deployment verified yet.
-- Five high development-only transitive audit findings remain; production audit is clean.
-- Node 24 is allowed but has not been tested in this environment.
-- A live demo and final one-page rendered write-up are future delivery checks.
-- You should be able to explain every implemented line and distinguish it from target architecture.
+Hosted-only development reduces reviewer prerequisites but requires service/network access. Polling and fixed KB section selection avoid infrastructure cost. Later R2 attachments use private storage and reauthorized signed access. Ticket links never expand access. The four-day plan prioritizes required ticket flow and reliable AI over optional uploads/polish.

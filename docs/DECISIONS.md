@@ -4,15 +4,20 @@ These decisions reflect the final user instructions, superseding the original ch
 
 | Decision | Alternatives / rationale | Status |
 |---|---|---|
-| Next.js modular monolith with Node Route Handlers | Separate Express backend adds deployment/API/session duplication without assignment benefit | Scaffold implemented; business handlers pending |
+| Next.js modular monolith with Node Route Handlers | Separate Express backend adds deployment/API/session duplication without assignment benefit | Auth/book handlers implemented; tickets pending |
 | Hosted Supabase only for local integration | Docker/local Supabase workflow removed by final revision; fewer reviewer prerequisites, but needs internet | Configuration foundation implemented; hosted flow unverified |
 | Separate development/demo projects | Shared project risks test/demo contamination; explicit target and project-reference checks reduce mistakes | Guards implemented; projects not supplied |
 | Prisma 7 stable line and pg adapter | Avoid a release candidate; matching client/adapter versions and generated client are locked | Implemented, schema validated |
 | Node 22.17 tested; Node 24 allowed | Matches available runtime and Prisma/Next requirements; Node 24 remains untested here | Engines and .nvmrc recorded |
 | Non-exposed app schema and restricted runtime DB role | Browser table access/RLS through Supabase would duplicate API authorization; Prisma does not inherit end-user identity | Migration/role SQL created, application unverified |
 | Supabase Auth UUID is users PK | Avoid parallel identities; external Auth FK enforces mapping without Prisma managing auth tables | Schema/SQL created |
-| Application users role plus author_profiles | Role metadata chosen by clients is unsafe; trusted bootstrap only | Schema created; auth enforcement pending |
-| Synthetic Auth aliases, original contacts preserved | email.com is not reserved; original emails may identify real people | Decision confirmed; no provisioning |
+| Application users role plus author_profiles | Client metadata cannot authorize access; role is loaded from the DB after server identity verification | Implemented; hosted verification pending |
+| Exact dataset Auth emails | Explicit Milestone 2 approval supersedes aliases; deliverable email.com identities require isolated-project approval and outbound-mail blocking | Implemented in scripts; provisioning not run |
+| Two equal ADMIN users without profiles | Trusted bootstrap, no frontend role selection or author promotion | Implemented; hosted verification pending |
+| Environment-owned shared demo passwords | Approved disposable Bookleaf123 defaults simplify review; existing passwords never reset | Template/scripts implemented; never for real data |
+| Server-only Auth and HTTP-only cookies | Browser SDK needs token access; backend REST preserves the requested token boundary | Browser factory removed; SSR proxy/routes implemented |
+| Non-sending PostgreSQL Send Email hook | Confirm-email toggle and omitted reset links do not stop recovery; replacement hook rejects mail without a new service | SQL/diagnostics implemented; activation pending |
+| Trusted provisioning marker | Email match alone must not adopt an unrelated identity; Admin-only metadata supports partial-failure recovery | Implemented and locally tested |
 | Exact source snapshots, Decimal money, DATE timestamps distinguished | Float money, invented null replacements and accounting reconstruction corrupt evidence | Schema and byte-integrity tests implemented |
 | Manual and AI classification stored separately | Single mutable field risks AI overwriting admin judgment | Schema implemented; service logic pending |
 | Short awaited classification after commit | Queue disproportionate for MVP; unawaited serverless work unreliable; bounded wait has a latency cost | Planned |
@@ -26,6 +31,8 @@ These decisions reflect the final user instructions, superseding the original ch
 | Ticket links later | Independent pair table can be added without changing ticket semantics | Documented only |
 
 ## Migration policy
+
+Migration validation is independent of runtime validation: only APP_ENV, SUPABASE_PROJECT_REF and DIRECT_URL are required, with explicit matching target, project, credentials, app schema and verified TLS. This permits first-time schema creation before the restricted runtime login exists. Runtime and privileged provisioning retain full runtime validation; owner credentials are never accepted for application access. runtime-role.sql requires the migrated tables/enums, followed by runtime configuration and email-hook setup.
 
 Initial SQL was generated offline from Prisma then augmented with checks, external Auth FK, expression/partial indexes and schema grants. It is not evidence of a successful database deployment. Only reviewed committed migrations go through the target-guarded wrapper; do not use db push/reset against hosted development/demo data. Supabase owns auth schema. Runtime role cannot import users or alter application roles.
 

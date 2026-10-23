@@ -17,7 +17,7 @@ try {
   process.exitCode = result.status ?? 1;
 } catch (error) {
   if (error instanceof z.ZodError) {
-    console.error("Migration configuration invalid. Run npm run env:check first; supply DIRECT_URL and an explicit target.");
+    console.error("Migration configuration invalid. Supply APP_ENV, SUPABASE_PROJECT_REF, DIRECT_URL and an explicit matching target. Run npm run env:check -- <target>.");
     console.error(error.issues.map((issue) => issue.path.join(".") || "DIRECT_URL").join(", "));
   } else console.error(error instanceof Error ? error.message : "Migration stopped.");
   process.exitCode = 1;

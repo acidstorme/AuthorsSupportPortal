@@ -32,4 +32,15 @@ describe("standalone environment CLI", () => {
     expect(result.stdout).not.toContain("Prisma migration");
     expect(result.stdout + result.stderr).not.toContain("fixture-secret");
   });
+  it("validates bootstrap settings without runtime, Auth or AI credentials", () => {
+    const bootstrap = { ...env, DATABASE_URL: undefined, APP_URL: undefined, NEXT_PUBLIC_SUPABASE_URL: undefined, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined, AI_MODE: "openai", OPENAI_API_KEY: undefined };
+    const result = spawnSync(process.execPath, [cli, "scripts/check-env.ts", "development"], { cwd: root, env: bootstrap, encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("Migration environment configuration valid");
+    expect(result.stdout).toContain("runtime credentials are not required");
+    expect(result.stdout + result.stderr).not.toContain("fixture-secret");
+    const runtime = spawnSync(process.execPath, [cli, "scripts/check-env.ts"], { cwd: root, env: bootstrap, encoding: "utf8" });
+    expect(runtime.status).toBe(1);
+    expect(runtime.stderr).toContain("DATABASE_URL");
+  });
 });

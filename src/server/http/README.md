@@ -1,3 +1,3 @@
 # HTTP transport boundary
 
-Reserved for response/error serialization, request IDs and same-origin mutation protection. No REST endpoints are implemented in Milestone 1. Future endpoints all use `/api/...` and the Node.js runtime; see `docs/API.md` for the planned contract.
+Implements standard JSON/error serialization, sanitized request IDs, same-origin mutation protection and bounded JSON parsing. Auth, current-user, admin overview and book APIs use these helpers. Ticket APIs are deferred. See docs/API.md for actual implemented contracts and separate future scope.

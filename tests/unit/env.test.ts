@@ -37,6 +37,23 @@ describe("environment configuration", () => {
     expect(() => parseMigrationEnv(fixture(), "demo")).toThrow(/target/);
     expect(parseMigrationEnv(fixture(), "development").APP_ENV).toBe("development");
   });
+  it("bootstraps migrations with only DIRECT_URL and target/project configuration", () => {
+    const minimal: NodeJS.ProcessEnv = { NODE_ENV: "test", APP_ENV: "development", SUPABASE_PROJECT_REF: project, DIRECT_URL: fixture().DIRECT_URL };
+    expect(parseMigrationEnv(minimal, "development")).toEqual({ APP_ENV: "development", SUPABASE_PROJECT_REF: project, DIRECT_URL: minimal.DIRECT_URL });
+    expect(() => parseRuntimeEnv(minimal)).toThrow();
+  });
+  it("ignores missing, placeholder and owner runtime URLs during migration validation", () => {
+    for (const DATABASE_URL of [undefined, "replace-me", fixture().DATABASE_URL!.replace("bookleaf_runtime.", "postgres.")]) {
+      const source = { ...fixture(), DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL: undefined, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined, APP_URL: undefined, AI_MODE: "openai", OPENAI_API_KEY: undefined };
+      expect(parseMigrationEnv(source, "development").DIRECT_URL).toBe(fixture().DIRECT_URL);
+      expect(() => parseRuntimeEnv(source)).toThrow();
+    }
+  });
+  it("keeps migration credential, schema and TLS requirements without runtime settings", () => {
+    for (const DIRECT_URL of [undefined, "replace-me", fixture().DIRECT_URL!.replace("verify-full", "disable"), fixture().DIRECT_URL!.replace("schema=app", "schema=public"), fixture().DIRECT_URL!.replace(":fixture@", "@")]) {
+      expect(() => parseMigrationEnv({ NODE_ENV: "test", APP_ENV: "development", SUPABASE_PROJECT_REF: project, DIRECT_URL }, "development")).toThrow();
+    }
+  });
   it("rejects cross-project migration URLs and transaction poolers", () => {
     expect(() => parseMigrationEnv({ ...fixture(), DIRECT_URL: fixture().DIRECT_URL!.replace(project, "xxxxxxxxxxxxxxxxxxxx") }, "development")).toThrow(/match/);
     expect(() => parseMigrationEnv({ ...fixture(), DIRECT_URL: fixture().DATABASE_URL }, "development")).toThrow(/transaction pooler/);

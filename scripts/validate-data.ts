@@ -9,7 +9,7 @@ try {
   if (hash !== expectedHash) throw new Error("Source dataset checksum differs from the supplied file. Do not normalize or edit it.");
   const data = sampleDataSchema.parse(JSON.parse(raw.toString("utf8")));
   console.log(`Source data validated: ${data.authors.length} authors, ${data.authors.flatMap((author) => author.books).length} books. Exact source checksum matches.`);
-  console.log("All contact emails use email.com (not reserved). Future Auth provisioning must use auth001@bookleaf-demo.example through auth010@bookleaf-demo.example.");
+  console.log("Exact email.com identities are explicitly approved for this isolated demo. Setup must verify the approved project and email-blocking acknowledgement.");
   console.log("No database writes or account provisioning were performed.");
 } catch (error) {
   console.error(error instanceof Error ? error.message : "Source validation failed.");

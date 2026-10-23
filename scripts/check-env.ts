@@ -1,13 +1,16 @@
 import { z } from "zod";
 import { loadProjectEnv } from "../src/server/config/load-env";
-import { parseMigrationEnv, parseRuntimeEnv } from "../src/server/config/env-schema";
+import { parseDemoEnv, parseMigrationEnv, parseRuntimeEnv } from "../src/server/config/env-schema";
 
 loadProjectEnv();
 try {
   const args = process.argv.slice(2);
-  const target = args.includes("--target") ? args[args.indexOf("--target") + 1] : args[0];
-  const env = args.length ? parseMigrationEnv(process.env, target) : parseRuntimeEnv(process.env);
-  console.log(`Environment configuration valid for ${env.APP_ENV}; AI mode: ${env.AI_MODE}.`);
+  const remaining = args.filter((arg) => arg !== "--demo");
+  const target = remaining.includes("--target") ? remaining[remaining.indexOf("--target") + 1] : remaining[0];
+  const env = args.includes("--demo") ? parseDemoEnv(process.env, target) : remaining.length ? parseMigrationEnv(process.env, target) : parseRuntimeEnv(process.env);
+  const scope = args.includes("--demo") ? "Demo setup" : remaining.length ? "Migration" : "Runtime";
+  console.log(`${scope} environment configuration valid for ${env.APP_ENV}.`);
+  if (scope === "Migration") console.log("Validated DIRECT_URL and explicit target/project only; runtime credentials are not required.");
   console.log("Configuration validation only. No database, Auth, or OpenAI connection was attempted.");
 } catch (error) {
   if (error instanceof z.ZodError) {

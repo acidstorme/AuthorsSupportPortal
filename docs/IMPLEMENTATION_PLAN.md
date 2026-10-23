@@ -1,6 +1,6 @@
 # Consolidated implementation plan
 
-Status: Milestone 1 implementation only. This document incorporates the user's final revisions and supersedes conflicting choices in the original chat plan.
+Status: Milestone 2 code implemented; hosted setup remains gated by email safety, runtime role and connection checks. The pasted Milestone 2 instructions supersede previous identity/password choices. Ticket and AI work await the next review.
 
 ## Delivery and acceptance
 
@@ -46,7 +46,9 @@ For each AI task, use a persisted started timestamp and a short conditional clai
 
 ## Identity and seed policy
 
-All source contact emails are `email.com` addresses, not reserved identities. Use synthetic `auth001@bookleaf-demo.example` through `auth010@bookleaf-demo.example`, preserving original profile emails exactly. One configurable author password; separate admin password; all outside Git. No ordinary rerun resets passwords. Stop on any email/UUID/author conflict. Recovery spans separate Auth calls and Prisma transactions; no automatic account deletion as compensation.
+Use the exact ten source email.com Auth logins, explicitly approved by the user for this isolated demo. No aliases. Two admins use DEMO_ADMIN1_EMAIL / DEMO_ADMIN2_EMAIL, separate from author profiles. Environment-owned demo defaults are Bookleaf123 and admin1@email.com / admin2@email.com. These disposable credentials must never be reused with real data. The obsolete singular admin-email variable is removed.
+
+Setup requires matching target/project approval, applied migrations, disabled signup, restricted runtime permissions, the reviewed no-mail function and separate confirmation that Send Email hook activation was verified. Keep DEMO_EMAIL_DISABLED_CONFIRMED=false and do not provision until both safety checks are complete. Existing identities require exact trusted markers and compatible DB mappings. Stop on conflicts; never reset passwords, promote roles, reassign UUIDs or delete accounts as compensation. Recovery spans Auth calls and Prisma transactions.
 
 ## Source ambiguities and explicit defaults
 
