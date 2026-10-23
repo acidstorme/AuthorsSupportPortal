@@ -1,5 +1,25 @@
 # Testing and verification
 
+## Milestone 4 verification — 24 October 2026
+
+Milestones 2 and 3 were reviewed by the user. No migration, seed, runtime grant, credential or Auth configuration change was made for this milestone.
+
+| Check | Executed result |
+|---|---|
+| npm run check | PASS: lint, generated types/TypeScript, 99 tests in 18 suites, Prisma validation, production build |
+| Initial check | STOPPED by readonly Prisma JSON metadata type error; fixed with a mutable typed record; later complete checks passed |
+| Temporary production server | Started on localhost:3104; stopped after verification |
+| npm run test:smoke -- http://localhost:3104 | PASS: 31 actual anonymous HTTP checks, including admin APIs, notes/events, mutations and admin detail redirect |
+| npm run test:admin:hosted -- development | STOPPED at migration verification, before sign-in or fixture creation |
+| npm run setup:safety | BLOCKED: self-signed certificate in certificate chain; no verification bypass |
+| git diff --check | PASS |
+
+New deterministic tests cover ADMIN restrictions across every endpoint; equal access for both admins; trusted self-assignment and clearing; strict body/query/UUID validation; all sixteen explicit status pairs including reopening/no-op; manual values/clearing without AI writes; private note DTOs and retry conflicts; parameterized queue filters/enum labels/priority ordering/pagination; row-lock ordering; resolved-reply attention and stale acknowledgement. Existing public DTO/isolation and CLOSED/RESOLVED reply tests remain passing. Prisma is mocked at repository boundaries: these tests do not prove real PostgreSQL close/reply serialization.
+
+Opt-in hosted command: `npm run test:admin:hosted -- development` with the app running at APP_URL and CA trust configured in both server and test processes. It first checks approved environment/project, signup, migrations, no-mail function and runtime role. It then signs in an author/two admins and retains one labelled test ticket, private note, public replies and audit events. It exercises queue filters, manual classification, assignment, note retry/visibility, RESOLVED reply/attention, close/reply race, post-close denial, reopening and history. Either valid race order is accepted; new replies after closure must always be rejected. No account creation, mail, password resets, deletes or direct privileged ticket mutations are performed.
+
+Manual review still required: use separate author/admin browser sessions to verify queue/detail rendering, notes privacy, five/ten-second active-tab polling, resolved attention, explicit status transitions and reopening. Browser-driven E2E and successful hosted lifecycle/concurrency checks are not claimed from this agent environment. The user's reviewed prior setup remains acknowledged.
+
 ## Milestone 3 verification
 
 The user reports Milestone 2 hosted setup, seed, safety checks and author/admin sign-ins all passed and approved progression. This is distinct from checks executed by the agent below.

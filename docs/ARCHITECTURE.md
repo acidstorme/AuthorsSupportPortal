@@ -2,7 +2,11 @@
 
 ## Implementation status
 
-Milestone 2 hosted setup and logins were verified/reviewed by the user. Milestone 3 implements author ticket creation/listing, public conversation and TanStack Query polling. Admin ticket management and AI are still planned. Tests distinguish mocked integration boundaries from hosted HTTP checks.
+Milestones 2 and 3 were reviewed by the user. Milestone 4 adds admin queue/filtering, manual triage, self-assignment, explicit lifecycle changes, private notes/history and resolved-reply attention. AI is still planned. Tests distinguish mocked integration boundaries from hosted HTTP checks.
+
+Admin Route Handlers delegate transport parsing to http/admin-ticket-handlers, then services enforce ADMIN/self-assignment and repositories perform atomic mutations. All close/reply operations lock the same ticket row. Mutation, updated timestamp and events share one transaction; no-op updates create no events. Admin queue filters/sorts use COALESCE(manual, AI) and existing expression indexes, with bounded pagination and fixed parameterized SQL. Unclassified sorts last.
+
+Author/public DTOs remain unchanged; private notes are fetched only through ADMIN-protected endpoints. Notes use their UUID primary key as a retry ID, checking creator/ticket/body to avoid duplicate insertions. No new table, permission or migration is needed. Attention is shared across admins: author replies while RESOLVED set a timestamp; acknowledgement must match the observed timestamp under the ticket lock, so it cannot clear a newer unseen reply. Opening/polling never acknowledges automatically.
 
 ```mermaid
 flowchart LR

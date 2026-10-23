@@ -1,6 +1,6 @@
 # Consolidated implementation plan
 
-Status: Milestone 2 hosted setup, seeding, safety and author/admin logins verified and reviewed by the user. Milestone 3 implements author ticket creation, listing and public conversations; see TESTING for executed verification. Admin management and AI remain subsequent review gates. The pasted Milestone 2 instructions supersede previous identity/password choices.
+Status: Milestones 2 and 3 reviewed by the user. Milestone 4 implements admin queue/filtering, self-assignment, manual triage, explicit status changes/reopening, private notes, history and resolved-reply attention. See TESTING for executed checks and hosted limitations. Stop for Milestone 4 review before AI. The pasted Milestone 2 instructions supersede previous identity/password choices.
 
 ## Delivery and acceptance
 

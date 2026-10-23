@@ -2,17 +2,23 @@
 
 A Next.js App Router modular monolith using TypeScript, Tailwind/shadcn UI, Prisma, hosted Supabase Auth/PostgreSQL, Zod and TanStack Query. OpenAI integration is planned for a later milestone.
 
-## Current status — Milestone 3
+## Current status — Milestone 4
 
 Implemented in code: shared email/password login, logout, server-side session refresh, HTTP-only cookies, verified Auth identity and database role lookup, protected author/admin landing pages, own-book lists and scoped book APIs, trusted author provisioning/two-admin bootstrap, idempotent source import and setup verification.
 
-The user verified/reviewed Milestone 2: hosted setup, seed, safety checks, author and admin logins work. Milestone 3 adds owner-scoped ticket creation, lists, public conversations, polling, idempotent retries and audit events. See [TESTING](docs/TESTING.md) for independently executed checks and remaining gaps.
+The user reviewed Milestones 2 and 3: hosted setup, author/admin access and author ticket core. Milestone 4 adds the admin queue, effective category/priority filters, self-assignment, manual triage, explicit lifecycle controls, private notes, audit history and resolved-reply attention. See [TESTING](docs/TESTING.md) for independently executed checks and remaining gaps.
 
-Admin ticket management, AI classification/drafts, deployment, uploads and ticket linking remain deferred. New tickets are OPEN and awaiting triage; no AI runs yet. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
+AI classification/drafts, deployment, uploads and ticket linking remain deferred. New tickets are OPEN and awaiting triage; admins can classify manually. No AI runs yet. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
 
 ## Prerequisites and first run
 
-### Review Milestone 3
+### Review Milestone 4
+
+Run `npm run dev`, sign in as either admin, and open /admin. Filter/search the queue, take/unassign a ticket, apply manual classification and explicit statuses, add a private note and read audit history. Use a separate browser session as the ticket's author: a reply while RESOLVED must preserve status and light the admin attention indicator; CLOSED must reject replies from both roles. Reopen explicitly with OPEN. Author pages must never show private notes. No new migration, environment variable or runtime permission is required.
+
+`npm run test:admin:hosted -- development` performs opt-in actual-HTTP lifecycle tests against APP_URL, after full project/migration/email/runtime safety preflight. It retains one labelled ticket, a private note, public replies and audit events. The close/reply race accepts either valid serialization; once closed, new replies must fail. It never provisions accounts, sends mail, resets passwords or deletes records. Start the app and configure certificate trust first.
+
+### Author ticket review
 
 With the reviewed hosted setup already seeded, run `npm run dev`, sign in as an author, and use **Create a ticket** on /author. Test general and owned-book inquiries, filtering, detail and replies. The financial book details preserve source nulls/decimal strings. New tickets remain awaiting triage until admin/AI work. There is no new migration or runtime-role SQL change for this milestone.
 
@@ -21,7 +27,7 @@ With the reviewed hosted setup already seeded, run `npm run dev`, sign in as an 
 - Node.js 22.12+ in 22.x, or 24.x; tested runtime is 22.17.0 (`.nvmrc`).
 - npm 10+; npm 11.5.2 previously hit an installation resolver bug. A clean lockfile install succeeded using npm 11.21.1.
 - An isolated hosted Supabase project; prefer separate development and deployed-demo projects. No Docker or local Supabase/PostgreSQL.
-- OpenAI credentials are unnecessary for Milestone 2.
+- OpenAI credentials are unnecessary through Milestone 4.
 
 ```bash
 npx --yes npm@11.21.1 ci
@@ -152,6 +158,7 @@ Only public Supabase URL/key are browser-safe; the M2 client does not instantiat
 | npm run test:hosted -- development | Opt-in live HTTP tests against a running app and completed setup; no account creation |
 | npm run test:smoke | Anonymous local HTTP checks against a running app; no hosted calls |
 | npm run test:tickets:hosted -- development | Opt-in hosted ticket checks; retains two labelled demo tickets/two replies |
+| npm run test:admin:hosted -- development | Opt-in hosted admin/lifecycle checks; retains one labelled ticket/note/replies/history |
 | npm run dev | Local development server |
 | npm run build / start | Build / run production locally |
 
@@ -171,10 +178,10 @@ Hosted HTTP tests use Playwright's request client and need no downloaded browser
 - **Logout:** clears all local session-cookie chunks and revokes that refresh session. Already issued access JWTs may remain valid until expiry; this is not an application-wide immediate revocation system.
 - **Windows sandbox:** native Next path resolution and Vitest cache operations required elevated tool execution during verification.
 - **Dependency audit:** M1 recorded five high dev-only Next ESLint/glob/braces findings and zero production findings. No new dependency was added in M2; review current advisories before delivery.
-- **Deferred:** admin ticket management, AI, R2 attachments, ticket links, full accounting, password recovery/self-registration, deployment. Hosted ticket integration remains unverified from the agent process because its DB certificate trust is incomplete; mocked ownership checks and anonymous HTTP checks pass.
+- **Deferred:** AI, R2 attachments, ticket links, full accounting, password recovery/self-registration, deployment. Hosted ticket integration has been blocked by certificate trust in the agent process; see TESTING for latest executed results. Mocked ownership/lifecycle tests do not establish real PostgreSQL concurrency.
 
 ## Documentation
 
 [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [AI design](docs/AI_DESIGN.md) · [Tests/results](docs/TESTING.md) · [Decisions](docs/DECISIONS.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [One-page write-up draft](docs/WRITEUP.md)
 
-Milestone 3 stops for review before Milestone 4 admin queue, filtering, assignment, private notes, explicit status changes and attention indicators. AI remains Milestone 5.
+Milestone 4 stops for review before Milestone 5 structured AI classification and grounded, editable, cached response drafts.

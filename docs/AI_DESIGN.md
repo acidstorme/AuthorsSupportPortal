@@ -2,7 +2,7 @@
 
 ## Status and model
 
-Milestone 1 installs the OpenAI SDK and validates future mode/model/key configuration. **No OpenAI request, deterministic mock provider, classification, draft cache service or prompt implementation is active yet.** AI-related database fields are foundations only.
+Through Milestone 4 the OpenAI SDK and future mode/model/key configuration are foundations only. **No OpenAI request, deterministic mock provider, classification, draft cache service or prompt implementation is active yet.** Manual triage now works, but opening/rendering/polling the admin UI never generates AI output. AI is Milestone 5 after review.
 
 Planned default: configurable `gpt-4o-mini`, justified by the assignment's recommendation, low-cost focused tasks and structured-output support. Evaluate against category/priority and grounded-response fixtures before committing to live-demo quality. Use OpenAI's [model documentation](https://developers.openai.com/api/docs/models/gpt-4o-mini) and [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs) when implementing. Model availability for the eventual account remains unverified.
 

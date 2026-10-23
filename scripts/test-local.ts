@@ -15,9 +15,13 @@ const login = await check("/login", 200); assert.ok((await login.text()).include
 for (const path of ["/api/me", "/api/books", "/api/books/BK001", "/api/admin/overview", "/api/tickets", "/api/tickets/11111111-1111-4111-8111-111111111111", "/api/tickets/11111111-1111-4111-8111-111111111111/messages"]) {
   const response = await check(path, 401); assert.equal((await response.json()).error.code, "UNAUTHENTICATED");
 }
+const ticketPath = "/api/tickets/11111111-1111-4111-8111-111111111111";
+for (const path of ["/api/admin/tickets", "/api/admin/tickets/11111111-1111-4111-8111-111111111111", `${ticketPath}/notes`, `${ticketPath}/events`]) await check(path, 401);
 for (const path of ["/author", "/admin", "/author/tickets/new", "/author/tickets/11111111-1111-4111-8111-111111111111"]) {
   const response = await check(path, 307); assert.equal(new URL(response.headers.get("location")!, origin).pathname, "/login");
 }
+await check("/admin/tickets/11111111-1111-4111-8111-111111111111", 307);
+for (const [suffix, method] of [["", "PATCH"], ["/assignment", "PUT"], ["/assignment", "DELETE"], ["/notes", "POST"], ["/acknowledge", "POST"]]) await check(ticketPath + suffix, 401, { method, headers: { Origin: origin, "Content-Type": "application/json" }, body: method === "DELETE" ? undefined : "{}" });
 await check("/api/auth/login", 403, { method: "POST", headers: { Origin: "https://untrusted.example.invalid", "Content-Type": "application/json" }, body: "{}" });
 await check("/api/auth/login", 422, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{}" });
 await check("/api/auth/login", 400, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{" });

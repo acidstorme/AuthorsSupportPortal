@@ -48,7 +48,7 @@ export const ticketsRepository: TicketsRepository = {
   },
   reply(id, authorId, actorId, body, requestId) {
     return getDb().$transaction(async (tx) => {
-      // Status changes in Milestone 4 must take this same lock before updating status.
+      // Admin status changes take this same lock before updating status.
       const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM app.tickets WHERE id = ${id}::uuid FOR UPDATE`;
       const ticket = rows.length ? await tx.ticket.findFirst({ where: { id, ...(authorId ? { authorId } : {}) } }) : null;
       if (!ticket) throw new AppError(404, "NOT_FOUND", "Ticket not found.");

@@ -38,6 +38,10 @@ Initial SQL was generated offline from Prisma then augmented with checks, extern
 
 ## Tooling findings
 
+Milestone 4 reuses the original tables/indexes/grants. Status changes use the same per-ticket row lock as replies; all four statuses are explicit valid destinations, including OPEN for reopening. Assignment is self-assignment or clearing by any admin, without status changes. Queue SQL is limited to fixed filters/sorts with bound values so effective manual-over-AI filters and PostgreSQL enum priority order remain consistent.
+
+Attention acknowledgement is explicit/shared between admins and names an observed reply timestamp; a stale timestamp returns 409. Opening/refocusing/polling never marks replies seen. Notes are independently private, including on closed tickets, and use their existing UUID primary key for matching retries. No generic versioning, lock service, retry queue, schema expansion or broader runtime grants were introduced. AI remains inactive pending Milestone 5.
+
 Milestone 3 needs no schema migration: core tables, request-ID uniqueness, ownership FK and audit fields were included initially. Preserve current runtime grants. Duplicate creation is handled with unique constraints and winner retrieval; replies use a short ticket row lock because status and insertion must be consistent. Public DTOs are explicit allowlists for both roles, keeping notes and future drafts private. Author ticket lists are author-only; the admin queue and lifecycle mutation APIs are Milestone 4. Initial descriptions are not duplicated as reply messages.
 
 Initial npm 11.5.2 installation crashed in its peer resolver. npm 11.21.1 installed successfully. Native Next.js/Vitest operations hit this Windows automation sandbox's filesystem restrictions and passed with elevated execution. These are verification-environment issues, not reasons to weaken application security.

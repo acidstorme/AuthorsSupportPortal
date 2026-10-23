@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented: authentication, current user, admin-access overview, scoped books and Milestone 3 author tickets/public messages. Milestone 2 hosted setup/sign-ins were verified by the user. Ticket tests include mocked handler/service/transaction boundaries and anonymous actual HTTP checks; see TESTING for hosted limitations. Admin management and AI endpoints remain planned.
+Implemented: authentication, current user, scoped books, author tickets/public messages and Milestone 4 admin queue, triage, assignment, status changes, notes, history and attention acknowledgement. Milestones 2 and 3 were reviewed by the user. Tests distinguish mocked service/transaction boundaries from actual HTTP checks; see TESTING for hosted limitations. AI endpoints remain planned.
 
 All implemented handlers use the Node.js runtime. They validate/authorize and delegate to services/repositories. Cookie authentication is required; Bearer-only clients are not supported.
 
@@ -50,7 +50,7 @@ Same-origin only; no body. Idempotent, including a client already signed out. Re
 Verified cookie session required. Returns the principal shown in the login example directly under data. 401 when unauthenticated, 403 for missing/inconsistent application mapping, 503 for dependency/configuration failure. It does not accept user IDs or role parameters.
 
 ### GET /api/admin/overview
-ADMIN only. Returns `{data:{user:<principal>,message:"Administrative access verified. Ticket management arrives in a later milestone."}}`. Both configured admins have identical permissions. Authors get 403; anonymous requests get 401. This is an access-confirmation endpoint, not a ticket queue.
+ADMIN only. Returns `{data:{user:<principal>,message:"Administrative access verified. Ticket management is available at /admin."}}`. Both configured admins have identical permissions. Authors get 403; anonymous requests get 401. Queue data is at /api/admin/tickets.
 
 ### GET /api/books
 Owner-scoped for authors; admins may read all or filter by author.
@@ -110,18 +110,65 @@ Only public messages are queried; no private notes or sender login emails/IDs ar
 ### POST /api/tickets/:ticketId/messages
 Owner or ADMIN. Body: `{"body":"Thank you for the update.","requestId":"11111111-1111-4111-8111-111111111111"}`. Body is trimmed 1–8000 characters. Sender comes from the verified principal; supplied sender IDs are rejected. Returns 201 `{data:<message>}` or 200 for a matching committed retry. Retry IDs are unique per ticket/sender; different content returns 409 IDEMPOTENCY_CONFLICT.
 
-New replies to CLOSED return 409 TICKET_CLOSED for both roles. An already committed matching reply may be retrieved by retry after closure without creating another message. OPEN/IN_PROGRESS/RESOLVED replies preserve status; author replies to RESOLVED set the attention timestamp for the future admin interface. Ticket lock, ownership/status recheck, message, updated timestamp and event are one transaction.
+New replies to CLOSED return 409 TICKET_CLOSED for both roles. An already committed matching reply may be retrieved by retry after closure without creating another message. OPEN/IN_PROGRESS/RESOLVED replies preserve status; author replies to RESOLVED set the attention timestamp for the admin interface. Ticket lock, ownership/status recheck, message, updated timestamp and event are one transaction.
 
-## Planned admin/AI ticket API — not implemented
+## Admin ticket API — implemented in Milestone 4
+
+Every endpoint in this section is ADMIN only: anonymous 401, AUTHOR 403 before database access. UUID syntax errors/invalid query or JSON fields return 422; missing ticket 404. Standard envelopes, same-origin mutation checks, JSON body/size limits and private/no-store caching apply. Both admins can manage all tickets, regardless of assignment. Opening/polling a ticket does not acknowledge author replies or change ticket state.
+
+### GET /api/admin/tickets
+
+Query: page/pageSize (same bounds/defaults as author lists); optional status/category/priority using enum identifiers; assignment=all (default), mine or unassigned; attention=all (default) or unseen; sort=created_desc (default), updated_desc or priority_desc; optional search (trimmed, max 200 characters). Search matches literal case-insensitive subject, author name or original author ID. Priority/category filters and priority sorting use manual-over-AI values. Priority order is CRITICAL, HIGH, MEDIUM, LOW, then unclassified; date descending and UUID descending break ties. Other sorts use descending date and UUID. SQL values are parameterized; no supplied SQL/sort expression is executed.
+
+Returns `{data:[<adminTicket>],meta:{page,pageSize,total}}`. Empty results are 200. Queue polling is every ten seconds while active.
+
+### GET /api/admin/tickets/:ticketId
+
+Returns `{data:<adminTicket>}`. Public ticket fields plus:
+```json
+{"author":{"authorId":"AUTH001","name":"Priya Sharma","email":"priya.sharma@email.com"},"book":null,"assignedTo":null,"manualCategory":null,"manualPriority":"HIGH","aiCategory":null,"aiPriority":null,"aiStatus":"PENDING","needsAttention":true,"resolvedAuthorReplyAt":"2026-10-24T00:00:00.000Z"}
+```
+Example shows only additional fields. No AI draft/error fields or note bodies are included. Private history is fetched separately. needsAttention compares the last author reply sent while RESOLVED with the shared acknowledged timestamp. The marker remains until an explicit acknowledgement, including across reopening/other status changes. Detail polls every five seconds while active. Admin detail page: /admin/tickets/:ticketId.
+
+### PATCH /api/tickets/:ticketId
+
+Body has one or more of status, manualCategory, manualPriority. Example: `{"status":"IN_PROGRESS","manualCategory":"GENERAL_INQUIRY","manualPriority":"HIGH"}`. Category/priority permit null to clear the override; missing keys are unchanged. Extra keys, AI values, empty object or invalid enums are rejected. Returns 200 `{data:<adminTicket>}`. Changes update only specified columns; AI fields are untouched. Each effective status/manual-field change records an event; repeated no-op updates do not.
+
+All four statuses are valid explicit destinations. Select OPEN to reopen RESOLVED/CLOSED. No messages, notes or assignment implicitly change status. Status and message insertion serialize with the same short ticket row lock; closed replies cannot slip past a committed close.
+
+### PUT /api/tickets/:ticketId/assignment
+
+JSON body `{}` required; derives assignee from the verified ADMIN. Supplied assignee IDs are rejected. Another admin may take ownership of an assigned ticket. Returns 200 `{data:<adminTicket>}`; does not change status. Same assignment is a no-op.
+
+### DELETE /api/tickets/:ticketId/assignment
+
+No body; clears assignment and returns 200 `{data:<adminTicket>}`. Already unassigned is a no-op; does not change status. Any admin may unassign.
+
+### GET /api/tickets/:ticketId/notes
+
+Query page/pageSize as above. Newest first, UUID descending tie-breaker. Returns:
+```json
+{"data":[{"id":"33333333-3333-4333-8333-333333333333","body":"Private support context.","creator":{"displayName":"Admin"},"createdAt":"2026-10-24T00:00:00.000Z"}],"meta":{"page":1,"pageSize":20,"total":1}}
+```
+Only admins receive note bodies. Notes are never public messages. Notes are readable/addable on CLOSED tickets because the closed policy restricts public replies.
+
+### POST /api/tickets/:ticketId/notes
+
+Body: `{"body":"Private support context.","requestId":"33333333-3333-4333-8333-333333333333"}`. Trimmed body 1–8000 characters, UUID request ID required. Returns 201 `{data:<adminTicket>}` after recording the note/event. This response refreshes ticket management data; fetch notes to retrieve the note DTO. requestId becomes the note UUID, enabling matching ticket/creator/content retries without duplicate notes/events; retries also return 201. A used ID with different content/owner/ticket returns 409 IDEMPOTENCY_CONFLICT. New submissions need new IDs. Note creation does not change status.
+
+### GET /api/tickets/:ticketId/events
+
+Query page/pageSize as above, newest first with UUID tie-breaker. Returns `{data:[{id,type,actor:{displayName}|null,metadata,createdAt}],meta:{page,pageSize,total}}`. Actor null means a system event. Mutation/event writes are atomic. Metadata records changed values or message/note IDs, never note bodies. All history is admin-only; authors cannot infer private notes through an events endpoint.
+
+### POST /api/tickets/:ticketId/acknowledge
+
+Body: `{"observedReplyAt":"2026-10-24T00:00:00.000Z"}` copied from the admin detail's resolvedAuthorReplyAt. Returns 200 `{data:<adminTicket>}` and records AUTHOR_REPLY_ACKNOWLEDGED when needed. If no matching author reply exists or a newer reply has arrived, returns 409 ATTENTION_CHANGED; refresh/review before retrying. Lock and timestamp comparison prevent acknowledging an unseen concurrent reply. Matching repeated acknowledgement is a no-op. Acknowledgement is shared between admins and never changes status.
+
+## Planned AI API — not implemented
 
 | Method/path | Access and intended behavior |
 |---|---|
-| PATCH /api/tickets/:id | ADMIN; explicit status/manual category/priority |
-| PUT/DELETE /api/tickets/:id/assignment | ADMIN; self-assignment or clear |
-| GET/POST /api/tickets/:id/notes | ADMIN only; private notes |
-| GET /api/tickets/:id/events | ADMIN only; audit history |
 | POST /api/tickets/:id/classification | ADMIN; bounded explicit retry |
 | POST /api/tickets/:id/draft | ADMIN; valid cache or generation; optional explicit regeneration |
-| PATCH /api/tickets/:id/attention | ADMIN; acknowledge observed resolved-author reply |
 
-Future create bodies never accept role/author/sender identity. Manual values override AI independently; neither means awaiting triage. Status/message rules, idempotency, private-note isolation and grounded AI review remain unchanged. Detailed ticket contracts will be synchronized with implementation in later milestones. No attachments/linking endpoints exist.
+Create bodies never accept role/author/sender identity. Manual values override AI independently; neither means awaiting triage. No attachments/linking endpoints exist. No AI generation is triggered by current admin opening, rendering or polling.

@@ -2,7 +2,13 @@
 
 ## Current walkthrough boundary
 
-Milestone 2 hosted setup, seed and author/admin logins were verified by the user. Milestone 3 adds author ticket creation, lists, conversations and polling. Admin lifecycle management and AI remain future work. See TESTING for independently executed checks versus user-reported results.
+Milestones 2 and 3 were reviewed by the user. Milestone 4 adds admin queue/filtering, assignment, manual triage, explicit lifecycle management, private notes/history and attention. AI remains future work. See TESTING for independently executed checks versus user-reported results.
+
+Admin walkthrough: /admin -> GET /api/admin/tickets -> ADMIN check -> validated filters -> parameterized queue repository. COALESCE selects each manual override independently, and PostgreSQL's CRITICAL/HIGH/MEDIUM/LOW enum order gives urgency sorting with nulls last. Original category labels are mapped explicitly at the SQL boundary because Prisma identifiers differ from stored enum labels.
+
+Mutations share a short ticket row lock with public replies. Explain the two valid close/reply orders: a reply commits before closing, or close commits first and the new reply is rejected. Neither flow can insert a reply after observing CLOSED. Assignment and notes leave status alone; repeated unchanged updates create no audit events. AI columns never appear in manual update payloads.
+
+Attention cannot be cleared by ordinary rendering. The admin submits the exact reply timestamp reviewed; a concurrent newer reply yields 409. Private note retries use the existing note UUID, checking ticket, creator and text before reuse. Public conversation DTOs exclude notes, and every note/history API independently enforces ADMIN even if called directly by an author. Notes remain available on closed tickets because that state blocks public replies, not internal support work.
 
 For ticket walkthroughs, start at src/server/validation/tickets.ts, then the thin /api/tickets handlers, services/tickets.ts and repositories/tickets.ts. Explain how the principal supplies author/sender IDs, strict schemas reject impersonation, the book composite foreign key backs up service ownership checks, and explicit DTOs omit notes, drafts and AI internals. The initial description is stored on the ticket; replies are separate public messages.
 
