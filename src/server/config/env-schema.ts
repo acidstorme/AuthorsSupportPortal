@@ -15,6 +15,7 @@ export const runtimeEnvSchema = publicEnvSchema.extend({
   APP_URL: z.url(),
   SUPABASE_PROJECT_REF: z.string().regex(/^[a-z]{20}$/, "Expected a 20-letter hosted project reference"),
   DATABASE_URL: databaseUrlSchema,
+  DATABASE_CA_CERT: z.string().optional(),
   AI_MODE: z.enum(["mock", "openai"]).default("mock"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().min(1).max(100).default("gpt-4o-mini"),

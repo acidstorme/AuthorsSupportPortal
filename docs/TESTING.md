@@ -187,3 +187,9 @@ M1 passed 14 tests, clean lockfile installation with npm 11.21.1, types/lint/sch
 M1 online audit reported five high findings in a development-only braces -> micromatch -> fast-glob -> Next ESLint chain; latest braces then was 3.0.3 with no patched release. The suggested forced fix downgraded the Next ESLint config across major versions and was not applied. Production audit reported zero vulnerabilities. M2 adds no dependency changes; this is a historical audit result, not a fresh clean full-audit claim.
 
 Source checksum remains 34fd3b03f4b26e68b466a6364c3b7fe2f3884d3d7dc65134b67cac8e006b59f8; Git marks the JSON -text to preserve its bytes.
+# Prisma TLS deployment regression (2026-10-24)
+
+`npm run check` passed: lint, TypeScript, 138 tests across 25 suites, Prisma schema validation and production build. New driver tests verify CA loading from file/raw PEM/escaped PEM, retention of explicit SSL settings through pg parsing, rejection of hostname mismatches, invalid CA failure and rejection of weaker SSL modes. The production login route trace includes the tracked public CA file.
+
+`NODE_ENV=production npm run db:verify:runtime` (PowerShell syntax in DEPLOYMENT.md) passed against hosted Supabase with NODE_EXTRA_CA_CERTS unset, using the actual PrismaPg initialization and restricted role, including `prisma.user.findUnique()`. This command is read-only and logs no user records. Live Vercel verification remains pending user redeployment; configuration logs alone do not establish a successful query.
+

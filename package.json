@@ -20,6 +20,7 @@
     "db:validate": "prisma validate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:status": "tsx scripts/migrate.ts --status",
+    "db:verify:runtime": "node --conditions=react-server --import tsx scripts/check-runtime-db.ts",
     "auth:provision": "tsx scripts/provision-authors.ts",
     "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "db:seed": "tsx scripts/seed.ts",

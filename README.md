@@ -40,7 +40,7 @@ No new database migration, grant, account provisioning or seed is needed. To app
 $env:NODE_EXTRA_CA_CERTS = (Resolve-Path .\certs\prod-ca-2021.crt).Path
 npm run dev
 ```
-This project-specific CA path passed the agent's hosted safety check. Keep sslmode=verify-full. For another project, obtain its trusted certificate through Supabase rather than disabling verification.
+This project-specific CA path passed the agent's hosted safety check. Keep sslmode=verify-full. For another project, obtain its trusted certificate through Supabase rather than disabling verification. The Next.js Prisma runtime now loads the bundled CA explicitly, or uses the server-only DATABASE_CA_CERT PEM override; it does not require NODE_EXTRA_CA_CERTS. Workstation migration/setup scripts can still need the shell setting above. For Vercel, paste the full public PEM into Production DATABASE_CA_CERT and follow [deployment TLS instructions](docs/DEPLOYMENT.md#apply-the-tls-fix-before-redeploying). `npm run db:verify:runtime` performs a read-only Prisma identity/login-query check.
 
 With the app running, `npm run test:ai:hosted -- development` verifies the deterministic workflow against hosted Auth/PostgreSQL and retains one labelled test ticket/draft/reviewed reply. Both app/test processes must use mock mode and the same APP_URL. `npm run test:ai:live -- live` makes **two paid synthetic requests** using the existing configured model/key (no author records or DB writes); the final live argument is required. It prints the synthetic draft for human grounding review, not credentials. Neither command provisions accounts or sends email.
 

@@ -1,6 +1,6 @@
 # Vercel deployment handoff
 
-Status: Vercel selected. The user requested local delivery review before selecting the demo Supabase project. No Vercel project has been linked/created, credentials uploaded, deployment published or production URL claimed. Configuration below is prepared; actual platform execution remains unverified.
+Status: The user deployed to Vercel using the existing isolated Supabase project and reported a Prisma TLS trust failure at login. The explicit driver CA fix below passed a local production-mode Prisma query; its execution inside Vercel awaits user redeployment. No deployment or remote environment change was performed by this fix.
 
 ## Files and build
 
@@ -34,13 +34,31 @@ Set these in **Vercel Production** for the chosen project, then redeploy after c
 | NEXT_PUBLIC_SUPABASE_URL | Matching selected project Auth URL |
 | NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY | Matching publishable/legacy anon key; not service-role |
 | DATABASE_URL | Selected project's bookleaf_runtime transaction-pooler URL; schema=app and sslmode=verify-full |
+| DATABASE_CA_CERT | Complete PEM contents of certs/prod-ca-2021.crt, including BEGIN/END CERTIFICATE lines; server-only, Production scope |
 | AI_MODE | openai or explicitly labelled mock |
 | OPENAI_MODEL | Approved available model; required for intended real-mode choice |
 | OPENAI_API_KEY | Private server-side API key, required only for openai mode |
 
 Do **not** upload DIRECT_URL, SUPABASE_SERVICE_ROLE_KEY, DEMO_* passwords/acknowledgements or provisioning credentials to the web runtime. They are only for a trusted setup workstation. Do not use a postgres owner connection as DATABASE_URL. Never use NEXT_PUBLIC_ for privileged keys.
 
-For CA trust, a deployment candidate is adding `&sslrootcert=certs%2Fprod-ca-2021.crt` to DATABASE_URL, referencing the traced public CA relative to runtime working directory. This exact relative-file pattern was tested locally with NODE_EXTRA_CA_CERTS unset and restricted_identity=true. A Windows absolute certificate path is invalid in Linux functions. The file must belong to the selected Supabase project's trusted chain. Its final Vercel artifact path/connectivity **must still be verified on the actual deployment**. Keep sslmode=verify-full; never set rejectUnauthorized:false or NODE_TLS_REJECT_UNAUTHORIZED=0. NODE_EXTRA_CA_CERTS is read at process startup; do not assume a local Windows shell path will work on Vercel.
+### Apply the TLS fix before redeploying
+
+1. In Vercel Project Settings → Environment Variables, add **DATABASE_CA_CERT**, scoped to **Production**. Open `certs/prod-ca-2021.crt` locally and paste the complete public PEM certificate, including both delimiter lines. Raw multiline PEM is supported; literal `\n` separators are also accepted. This is a public trust certificate, not a private key. Do not use a NEXT_PUBLIC_ variable.
+2. Keep DATABASE_URL on the same project's transaction pooler, port **6543**, with the **bookleaf_runtime.<project-ref>** username, existing encoded password, and `?schema=app&sslmode=verify-full`. Remove obsolete sslrootcert/sslcert/sslkey path parameters. Do not switch to the owner role. The application validates this original URL, then supplies its host, port, credentials and database directly to pg with mandatory TLS settings; query-string overrides cannot replace them.
+3. Remove any Windows-path NODE_EXTRA_CA_CERTS setting from Vercel. No application code sets this variable. Keep certificate verification enabled; do not configure NODE_TLS_REJECT_UNAUTHORIZED=0.
+4. Deploy the reviewed source containing this fix after saving the Production variables. Do not run migrations or reseed for this fix. Keep all other existing Auth/AI/project settings intact.
+5. Attempt author and admin login. Runtime logs should contain `database_tls_configured`, `caSource: environment`, and both verification flags true, followed by successful login requests. This configuration log alone does not prove connectivity; successful login performs the actual Prisma user lookup. Do not paste credentials or full database URLs into logs/chat.
+
+Prisma/client/adapter versions inspected: **7.10.1**; pg: **8.23.1**. The adapter uses explicit `ssl.ca`, `rejectUnauthorized: true`, Node's standard `checkServerIdentity`, and the URL hostname as SNI. This avoids [pg's documented connection-string SSL overwrite behavior](https://node-postgres.com/features/ssl). No adapter or ORM replacement is needed. If DATABASE_CA_CERT is absent/empty, the application reads the bundled `certs/prod-ca-2021.crt`; next.config.ts explicitly traces this fallback into server artifacts. Invalid configured PEM fails closed instead of falling back. Use the CA provided by Supabase for the selected project's chain if changing projects.
+
+Local read-only verification of the actual Prisma initialization:
+```powershell
+$env:NODE_ENV = "production"
+Remove-Item Env:NODE_EXTRA_CA_CERTS -ErrorAction SilentlyContinue
+npm run db:verify:runtime
+Remove-Item Env:NODE_ENV
+```
+This checks the restricted database identity and executes `prisma.user.findUnique()` without printing account data or changing records. On 2026-10-24 it passed against hosted Supabase using the bundled CA with startup CA trust unset. It is a production-mode local check, not a claim that the new Vercel deployment has been verified. Trusted migration/provisioning scripts still use their documented workstation CA configuration.
 
 In Supabase Auth, keep signup disabled and the Send Email hook active. Set Site URL to the final HTTPS origin and narrow allowed redirects to intended origins. Email/password is the only implemented flow; no invitations/recovery calls are needed.
 
