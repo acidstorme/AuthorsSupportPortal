@@ -9,6 +9,11 @@ const ticket = { id: "ticket", subject: "Question", description: "Help", bookId:
 const repo = { queue: vi.fn(), find: vi.fn(), notes: vi.fn(), events: vi.fn(), mutate: vi.fn() } satisfies AdminTicketsRepository;
 beforeEach(() => { vi.resetAllMocks(); repo.find.mockResolvedValue(ticket); repo.mutate.mockResolvedValue(ticket); });
 describe("admin ticket services", () => {
+  it("validates UTC date ranges, leap days and unresolved status combinations", () => {
+    expect(adminQueueSchema.parse({ createdFrom: "2024-02-29", createdTo: "2024-03-01", unresolved: "only", sort: "created_asc" })).toMatchObject({ createdFrom: "2024-02-29", sort: "created_asc" });
+    for (const input of [{ createdFrom: "2026-02-30" }, { createdTo: "24/10/2026" }, { createdFrom: "2026-10-25", createdTo: "2026-10-24" }, { status: "RESOLVED", unresolved: "only" }, { status: "CLOSED", unresolved: "only" }]) expect(adminQueueSchema.safeParse(input).success).toBe(false);
+    expect(adminQueueSchema.safeParse({ status: "IN_PROGRESS", unresolved: "only" }).success).toBe(true);
+  });
   it("rejects authors before any admin repository access", async () => {
     await expect(adminQueue(author, adminQueueSchema.parse({}), repo)).rejects.toMatchObject({ status: 403 });
     await expect(adminDetail(author, "ticket", repo)).rejects.toMatchObject({ status: 403 });

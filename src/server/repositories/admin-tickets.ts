@@ -22,6 +22,9 @@ export const adminTicketsRepository: AdminTicketsRepository = {
   async queue(query, actorId) {
     const parts = [Prisma.sql`TRUE`];
     if (query.status) parts.push(Prisma.sql`t.status = ${query.status}::app."TicketStatus"`);
+    if (query.unresolved === "only") parts.push(Prisma.sql`t.status IN ('OPEN'::app."TicketStatus", 'IN_PROGRESS'::app."TicketStatus")`);
+    if (query.createdFrom) parts.push(Prisma.sql`t.created_at >= (${query.createdFrom}::date::timestamp AT TIME ZONE 'UTC')`);
+    if (query.createdTo) parts.push(Prisma.sql`t.created_at < ((${query.createdTo}::date + INTERVAL '1 day') AT TIME ZONE 'UTC')`);
     if (query.category) parts.push(Prisma.sql`COALESCE(t.manual_category, t.ai_category) = ${categoryLabels[query.category]}::app."TicketCategory"`);
     if (query.priority) parts.push(Prisma.sql`COALESCE(t.manual_priority, t.ai_priority) = ${query.priority}::app."TicketPriority"`);
     if (query.assignment === "mine") parts.push(Prisma.sql`t.assigned_to_id = ${actorId}::uuid`);
@@ -31,6 +34,7 @@ export const adminTicketsRepository: AdminTicketsRepository = {
     const where = Prisma.join(parts, " AND ");
     // PostgreSQL enum order is CRITICAL, HIGH, MEDIUM, LOW; unclassified sorts last.
     const order = query.sort === "priority_desc" ? Prisma.sql`COALESCE(t.manual_priority, t.ai_priority) ASC NULLS LAST, t.created_at DESC, t.id DESC`
+      : query.sort === "created_asc" ? Prisma.sql`t.created_at ASC, t.id ASC`
       : query.sort === "updated_desc" ? Prisma.sql`t.updated_at DESC, t.id DESC` : Prisma.sql`t.created_at DESC, t.id DESC`;
     return getDb().$transaction(async (tx) => {
       const ids = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT t.id FROM app.tickets t JOIN app.author_profiles a ON a.author_id=t.author_id WHERE ${where} ORDER BY ${order} LIMIT ${query.pageSize} OFFSET ${(query.page - 1) * query.pageSize}`);

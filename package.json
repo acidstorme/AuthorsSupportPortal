@@ -32,6 +32,8 @@
     "test:ai:hosted": "tsx scripts/test-ai-hosted.ts",
     "test:ai:live": "node --conditions=react-server --import tsx scripts/test-ai-live.ts",
     "test:ai:composer": "tsx scripts/test-ai-composer-browser.ts",
+    "test:portal:browser": "tsx scripts/test-portal-browser.ts",
+    "docs:writeup": "python scripts/render-writeup.py",
     "test:smoke": "tsx scripts/test-local.ts",
     "postinstall": "prisma generate"
   },

@@ -2,15 +2,30 @@
 
 A Next.js App Router modular monolith using TypeScript, Tailwind/shadcn UI, Prisma, hosted Supabase Auth/PostgreSQL, Zod, TanStack Query and OpenAI, with deterministic mock mode.
 
-## Current status — Milestone 5
+## Current status — Milestone 6 local delivery
 
 Implemented in code: shared email/password login, logout, server-side session refresh, HTTP-only cookies, verified Auth identity and database role lookup, protected author/admin landing pages, own-book lists and scoped book APIs, trusted author provisioning/two-admin bootstrap, idempotent source import and setup verification.
 
-The user reviewed Milestones 2–4. Milestone 5 adds awaited best-effort classification after ticket persistence, admin retries, grounded cached response drafts, explicit regeneration and an editable admin-reviewed send flow. Real OPENAI and deterministic MOCK providers are visibly distinguished in the admin UI. See [TESTING](docs/TESTING.md) for exact checks and remaining gaps.
+The user reviewed Milestones 2–5 and the draft-preview UX. Local delivery now includes UTC date filtering, oldest-unresolved triage, real-browser author/admin acceptance, verified exact inventory and the rendered one-page write-up. Real OPENAI and deterministic MOCK providers remain visibly distinguished. See [TESTING](docs/TESTING.md) for exact checks and remaining gaps.
 
 Deployment, uploads and ticket linking remain deferred. New tickets are OPEN; AI failure leaves them available for manual triage. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
 
+Vercel is selected and configuration is prepared, but the user requested local review before choosing the public demo's Supabase project. **No live URL, Vercel project creation or publishing is claimed.** The concrete handoff is [DEPLOYMENT](docs/DEPLOYMENT.md).
+
 ## Prerequisites and first run
+
+### Local delivery review
+
+Run `npm run dev` with the reviewed hosted setup. On /admin, Created from/through filter creation dates in UTC; through includes the whole selected day. Oldest unresolved first selects OPEN/IN_PROGRESS and ascending creation time, retaining other filters. Reset filters clears search/date selections. Ticket rows show creation time. No migration or new runtime permission is needed.
+
+Real-browser acceptance: `npm run test:portal:browser -- development` with a local app at APP_URL, system Edge, mock mode in both app/test shells and the CA exported before startup. This uses actual author/admin UI, real hosted records and polling without intercepted APIs or paid AI. It retains one labelled ticket, private note, public replies and events per run. The separate editor-preview regression remains `npm run test:ai:composer -- development` and intercepts ticket APIs.
+
+The submission write-up is available as [one-page PDF](docs/WRITEUP.pdf) and [Markdown source](docs/WRITEUP.md). To regenerate optionally (Python 3.12 tested; not required to run/deploy the app):
+```powershell
+python -m pip install -r scripts/requirements-docs.txt
+npm run docs:writeup
+```
+The renderer asserts exactly one A4 page and writes an ignored PNG preview to tmp/writeup-page.png for visual checking. Generation was verified using the listed dependency versions; the PDF was visually inspected.
 
 ### Review Milestone 5
 
@@ -178,6 +193,8 @@ Only public Supabase URL/key are browser-safe; the M2 client does not instantiat
 | npm run test:admin:hosted -- development | Opt-in hosted admin/lifecycle checks; retains one labelled ticket/note/replies/history |
 | npm run test:ai:hosted -- development | Hosted MOCK AI workflow; retains a labelled ticket/draft/reviewed reply |
 | npm run test:ai:live -- live | Two paid synthetic provider calls; no Auth/DB or author records |
+| npm run test:portal:browser -- development | Actual Edge author/admin/polling delivery flow; retains labelled records |
+| npm run docs:writeup | Optional Python-based one-page PDF/preview renderer |
 | npm run dev | Local development server |
 | npm run build / start | Build / run production locally |
 
@@ -201,6 +218,6 @@ Hosted HTTP tests use Playwright's request client and need no downloaded browser
 
 ## Documentation
 
-[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [AI design](docs/AI_DESIGN.md) · [Tests/results](docs/TESTING.md) · [Decisions](docs/DECISIONS.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [One-page write-up draft](docs/WRITEUP.md)
+[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [AI design](docs/AI_DESIGN.md) · [Tests/results](docs/TESTING.md) · [Decisions](docs/DECISIONS.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [Vercel handoff](docs/DEPLOYMENT.md) · [Write-up source](docs/WRITEUP.md) · [One-page PDF](docs/WRITEUP.pdf)
 
-Milestone 5 stops for review before Milestone 6 delivery hardening, focused browser checks, deployment and final documentation/write-up verification. Rechecking the original PDF also identified queue date-range filtering/oldest-unresolved visibility as delivery gaps; they are not claimed complete by the existing newest/updated/priority controls.
+Local Milestone 6 work is ready for review. Publication remains pending the chosen Vercel account/project, final HTTPS origin and explicit Supabase demo target; see DEPLOYMENT. Cloudflare R2 and ticket linking remain deferred extensions, not missing core upload requirements.

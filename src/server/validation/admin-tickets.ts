@@ -7,8 +7,13 @@ export const adminQueueSchema = messageListSchema.extend({
   status: statusSchema.optional(), category: categorySchema.optional(), priority: prioritySchema.optional(),
   assignment: z.enum(["all", "mine", "unassigned"]).default("all"),
   attention: z.enum(["all", "unseen"]).default("all"),
-  sort: z.enum(["created_desc", "updated_desc", "priority_desc"]).default("created_desc"),
+  sort: z.enum(["created_desc", "created_asc", "updated_desc", "priority_desc"]).default("created_desc"),
+  createdFrom: z.iso.date().optional(), createdTo: z.iso.date().optional(),
+  unresolved: z.enum(["all", "only"]).default("all"),
   search: z.string().trim().max(200).optional(),
+}).superRefine((query, ctx) => {
+  if (query.createdFrom && query.createdTo && query.createdFrom > query.createdTo) ctx.addIssue({ code: "custom", path: ["createdTo"], message: "Through date must be on or after From date." });
+  if (query.unresolved === "only" && query.status && ["RESOLVED", "CLOSED"].includes(query.status)) ctx.addIssue({ code: "custom", path: ["status"], message: "Unresolved-only cannot include resolved or closed tickets." });
 });
 export const updateTicketSchema = z.strictObject({ status: statusSchema.optional(),
   manualCategory: categorySchema.nullable().optional(), manualPriority: prioritySchema.nullable().optional(),

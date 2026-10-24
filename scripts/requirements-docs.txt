@@ -1,0 +1,4 @@
+# Optional write-up generation only; not application or Vercel dependencies.
+reportlab==4.4.9
+pypdf==6.10.0
+pypdfium2==5.14.0

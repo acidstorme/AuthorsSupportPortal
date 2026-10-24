@@ -32,6 +32,10 @@ These decisions reflect the final user instructions, superseding the original ch
 
 ## Migration policy
 
+Milestone 6 defines creation-date filters in UTC, with inclusive selected dates and next-midnight exclusion to avoid timestamp/DST ambiguity. The oldest-unresolved shortcut means OPEN/IN_PROGRESS and ascending creation time, preserving other filters. No arbitrary aging SLA or escalation policy is invented. No migration is required.
+
+Vercel was selected for deployment preparation. The user defers selection of the public demo's Supabase project until local review; no project creation, linking, credential upload or publication is authorized by this preparation. Build configuration pins the previously tested clean-install npm version and includes dev build tooling. Setup credentials/migrations never run in cloud build. The one-page write-up remains explicit that deployment is pending.
+
 Migration validation is independent of runtime validation: only APP_ENV, SUPABASE_PROJECT_REF and DIRECT_URL are required, with explicit matching target, project, credentials, app schema and verified TLS. This permits first-time schema creation before the restricted runtime login exists. Runtime and privileged provisioning retain full runtime validation; owner credentials are never accepted for application access. runtime-role.sql requires the migrated tables/enums, followed by runtime configuration and email-hook setup.
 
 Initial SQL was generated offline from Prisma then augmented with checks, external Auth FK, expression/partial indexes and schema grants. It is not evidence of a successful database deployment. Only reviewed committed migrations go through the target-guarded wrapper; do not use db push/reset against hosted development/demo data. Supabase owns auth schema. Runtime role cannot import users or alter application roles.

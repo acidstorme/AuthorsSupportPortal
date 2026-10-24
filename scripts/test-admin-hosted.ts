@@ -27,6 +27,17 @@ try {
   stage = "ticket creation";
   const created = await author.post("/api/tickets", { data: { subject: `[Milestone 4 verification] ${randomUUID()}`, description: "Synthetic lifecycle test; no support action needed.", requestId: randomUUID(), bookId: null } });
   assert.equal(created.status(), 201); const ticket = (await created.json()).data; const path = `/api/tickets/${ticket.id}`;
+  stage = "UTC date filters and oldest unresolved queue";
+  const day = ticket.createdAt.slice(0, 10);
+  const next = new Date(`${day}T00:00:00.000Z`); next.setUTCDate(next.getUTCDate() + 1);
+  const previous = new Date(`${day}T00:00:00.000Z`); previous.setUTCDate(previous.getUTCDate() - 1);
+  const searchQuery = `search=${encodeURIComponent(ticket.subject)}`;
+  const dated = await admin.get(`/api/admin/tickets?${searchQuery}&createdFrom=${day}&createdTo=${day}&unresolved=only&sort=created_asc`);
+  assert.equal(dated.status(), 200); assert.equal((await dated.json()).meta.total, 1);
+  for (const boundary of [`createdFrom=${next.toISOString().slice(0, 10)}`, `createdTo=${previous.toISOString().slice(0, 10)}`]) {
+    const outside = await admin.get(`/api/admin/tickets?${searchQuery}&${boundary}`); assert.equal(outside.status(), 200); assert.equal((await outside.json()).meta.total, 0);
+  }
+  assert.equal((await admin.get(`/api/admin/tickets?createdFrom=${next.toISOString().slice(0, 10)}&createdTo=${day}`)).status(), 422);
   stage = "admin RBAC and assignment";
   assert.equal((await author.get("/api/admin/tickets")).status(), 403);
   assert.equal((await author.patch(path, { data: { status: "CLOSED" } })).status(), 403);

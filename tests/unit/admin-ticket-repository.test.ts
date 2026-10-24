@@ -78,4 +78,13 @@ describe("admin ticket atomic mutations (mocked Prisma)", () => {
     expect(sql.values).toContain("General Inquiry"); expect(sql.values).toContain("HIGH");
     expect(sql.values.slice(-2)).toEqual([20, 20]);
   });
+  it("uses UTC inclusive dates with an exclusive following-midnight bound and oldest ordering", async () => {
+    tx.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([{ total: 0n }]); tx.ticket.findMany.mockResolvedValue([]);
+    await adminTicketsRepository.queue(adminQueueSchema.parse({ createdFrom: "2026-10-23", createdTo: "2026-10-24", unresolved: "only", sort: "created_asc" }), "admin");
+    const sql = tx.$queryRaw.mock.calls[0][0];
+    expect(sql.sql).toContain("t.created_at >= (?::date::timestamp AT TIME ZONE 'UTC')");
+    expect(sql.sql).toContain("t.created_at < ((?::date + INTERVAL '1 day') AT TIME ZONE 'UTC')");
+    expect(sql.sql).toContain("'OPEN'::app.\"TicketStatus\", 'IN_PROGRESS'::app.\"TicketStatus\"");
+    expect(sql.sql).toContain("ORDER BY t.created_at ASC, t.id ASC"); expect(sql.values).toContain("2026-10-23"); expect(sql.values).toContain("2026-10-24");
+  });
 });

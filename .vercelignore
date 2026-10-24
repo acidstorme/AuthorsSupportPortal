@@ -1,0 +1,11 @@
+.env*
+.git
+tmp
+test-results
+playwright-report
+coverage
+tests
+scripts
+docs
+data
+*.log

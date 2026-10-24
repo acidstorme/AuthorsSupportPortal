@@ -2,7 +2,9 @@
 
 ## Implementation status
 
-Milestones 2–4 were reviewed by the user. Milestone 5 adds real/MOCK AI providers, post-persistence classification and cached grounded admin drafts with editable explicit send. Tests distinguish mocked boundaries, hosted HTTP and live provider checks; see TESTING.
+Milestones 2–5 and the draft UX follow-up were reviewed by the user. Milestone 6 local delivery completes UTC date/oldest-unresolved triage and prepares Vercel configuration. Publication remains pending local review/project selection. Tests distinguish mocked boundaries, real browser/hosted HTTP and live provider checks; see TESTING.
+
+Queue date ranges use UTC creation dates with an inclusive start and exclusive next-midnight upper bound; oldest order is creation time/UUID ascending. Unresolved means OPEN or IN_PROGRESS; contradictory status combinations are rejected. These are bounded parameterized queries over existing columns/indexes, not a new schema or lifecycle policy. The Vercel build only generates/compiles; migrations and Auth provisioning remain trusted workstation tasks. Public CA files are explicitly traced into server artifacts for relative sslrootcert use, preserving verified TLS; actual Vercel path/connectivity must be confirmed after publication.
 
 AI flow: ticket transaction commits -> one awaited classification claim -> provider outside transaction -> conditional AI-only update/event. Failure never rolls back the saved ticket; manual fields are never in AI updates. Explicit admin retries use a per-ticket thirty-second claim/cooldown. Auth/database use core configuration validation independent of optional AI settings, preserving every role/project/TLS check while allowing manual support when AI is misconfigured.
 

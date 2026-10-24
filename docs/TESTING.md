@@ -1,5 +1,29 @@
 # Testing and verification
 
+## Milestone 6 local delivery — 24 October 2026
+
+Scope: local acceptance and Vercel preparation only. The user selected Vercel and explicitly deferred the demo Supabase project decision until local review. No Vercel project was created/linked, no deployment credentials uploaded, no Git push/publication or live URL claimed.
+
+| Check | Actual result |
+|---|---|
+| npm run check | PASS: lint, TypeScript/route generation, 134 tests in 24 suites, Prisma validation and production build |
+| Hosted admin/date regression | PASS: inclusive same-day UTC range, future/past exclusion, reversed-range 422, oldest-unresolved SQL and existing assignment/notes/lifecycle/concurrency checks |
+| npm run test:portal:browser -- development | PASS: real Edge UI author/admin login, owned-book ticket creation, second-author 404, queue date/oldest controls, assignment, private notes, reviewed public send, active-tab author polling, resolved reply/admin attention polling and closed read-only UI; no intercepted APIs or paid AI |
+| npm run setup:verify -- development | PASS: 12 approved Auth/app accounts, 10 author profiles, 2 admins, 18 books and exact supplied data/ownership |
+| npm run test:hosted -- development | PASS: all 12 existing logins, correct roles/landings, HTTP-only cookies, scoped books, admin restrictions, origin checks and logout; sessions only |
+| npm run data:validate | PASS: 10 authors/18 books, unchanged exact source SHA-256 |
+| npm audit --omit=dev | PASS: zero production vulnerabilities reported at execution; not a claim about dev dependencies or future advisories |
+| Relative CA connection | PASS: sslrootcert=certs/prod-ca-2021.crt, sslmode=verify-full, NODE_EXTRA_CA_CERTS unset, bookleaf_runtime verified |
+| Next function file trace | PASS: public CA included in .next/server/app/api/auth/login/route.js.nft.json; actual Vercel runtime still unverified |
+| npm run docs:writeup | PASS using Python 3.12.14 and pinned optional documentation dependencies; exactly one A4 page; latest PNG visually inspected |
+| git diff --check | PASS |
+
+The first two full-browser attempts stopped at queue combobox locators after ticket creation. A read-only accessibility inspection confirmed the controls' actual roles/values; replacing label-text matching with exact combobox role locators fixed the harness. These attempts are not counted as passing acceptance runs. Retained labelled fixtures: c5bf4b82-fe26-4f52-9b78-add7d44a02da and 07004df8-bc57-4fa0-9f91-1c3080a7a9ce (early browser attempts), 32125f29-f1e6-4dc1-ae3a-ef0325365d44 (passing browser flow, notes/replies/history, ends CLOSED), and 90894448-6e05-4845-8dbf-904a1479ec75 (passing admin/date regression). No fixture/source records were deleted or account passwords reset. Temporary server localhost:3108 was stopped after verification.
+
+The optional PDF renderer initially found PyMuPDF unavailable and was adjusted to the bundled PDFium renderer; reportlab/pypdf/pypdfium2 versions are pinned in scripts/requirements-docs.txt. The npm wrapper was tested with that prepared Python on PATH. Python is not needed for the application or Vercel build. docs/WRITEUP.pdf is the reviewed output; tmp/writeup-page.png is ignored visual QA output.
+
+The actual-browser acceptance uses headless system Edge and real hosted Auth/DB, with app/test AI_MODE=mock. Polling checks explicitly bring the relevant tab to the foreground, matching the product's active-tab polling behavior. It tests real UI integration, not live-model semantic accuracy, every browser/device or token-expiry timing. No new dependencies were added to the application.
+
 ## Draft preview UX follow-up — 24 October 2026
 
 - Lint, TypeScript and production build passed for the updated composer.
@@ -147,16 +171,14 @@ The hosted harness uses Playwright's API request client, not downloaded browsers
 
 Do not create conflicting disposable users in the real demo merely to exercise negative cases; deterministic tests cover these conflicts. Use a separate explicitly approved test project for future destructive fixtures. No Docker/local database is required or introduced.
 
-## Remaining gaps
+## Remaining delivery/production gaps
 
 - Full account provisioning/recovery rerun was user-verified in Milestone 2, not repeated destructively during AI work. No account password reset or role reassignment is claimed/tested.
 - Real expiry/refresh timing is not proven by mocked proxy tests or short HTTP sessions.
-- Full browser Playwright UI flows; current real-HTTP smoke/harness does not replace browser interaction coverage.
+- Broader browser/device/accessibility coverage beyond the passed focused Edge editor and author/admin flows.
 - Broad real-model accuracy/adversarial evaluation, long-conversation quality and account-level AI budget enforcement; current live check is one synthetic ISBN case.
-- Browser-observed polling/edit preservation; HTTP service tests do not replace UI interaction coverage.
-- Assignment-required queue date range and oldest-unresolved visibility need delivery follow-up; newest/updated/priority controls alone do not satisfy these fully.
-- Live demo/deployment and Node 24 compatibility.
-- Final write-up render check; its short draft will be rendered at delivery.
+- Live Vercel publication, chosen demo Supabase project, final HTTPS/cookie/origin/DB/AI checks and Node 24 compatibility. The required live demo is not complete until published and verified; see DEPLOYMENT.
+- A fresh full development-dependency audit was not performed; historical dev-only findings below are not erased by a clean production audit.
 
 ## Historical Milestone 1 and dependency audit
 

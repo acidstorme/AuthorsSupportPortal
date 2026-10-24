@@ -1,6 +1,6 @@
 # Consolidated implementation plan
 
-Status: Milestones 2–4 reviewed by the user. Milestone 5 implements bounded classification, real/MOCK providers, faithful fixed KB grounding, persisted draft cache/fingerprint, manual editing and explicit sending. See TESTING for exact local/hosted/live checks. Stop for Milestone 5 review before delivery/deployment. The pasted Milestone 2 instructions supersede previous identity/password choices.
+Status: Milestones 2–5 and the draft-preview follow-up were reviewed by the user. Milestone 6 local delivery adds UTC date filtering, oldest-unresolved triage, real browser acceptance, a rendered one-page write-up and Vercel deployment preparation. Vercel is selected; publication and demo Supabase selection are explicitly deferred until local review. No live URL is claimed. See TESTING and DEPLOYMENT for exact checks/handoff. The pasted Milestone 2 instructions supersede previous identity/password choices.
 
 ## Delivery and acceptance
 
@@ -52,7 +52,7 @@ Setup requires matching target/project approval, applied migrations, disabled si
 
 ## Source ambiguities and explicit defaults
 
-- PDF recheck during Milestone 5 confirms admin queue date filtering and easy oldest-unresolved visibility are required. Existing newest/updated/priority sorting does not fully cover this; record as a Milestone 6 delivery gap, not a completed feature.
+- PDF recheck identified required date filtering/oldest-unresolved visibility. Milestone 6 implements UTC creation-date boundaries, created_asc and unresolved=only with a queue shortcut; see TESTING for actual verification.
 
 - Attachments: PDF explicitly says UI-only and actual upload is a bonus. Disabled honest placeholder is compliant; future provider is R2, never Supabase Storage.
 - Source contains 16 published titles and two in production; show all owned books, preserving nulls and empty platform arrays.

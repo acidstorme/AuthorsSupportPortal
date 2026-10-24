@@ -2,6 +2,12 @@
 
 ## Current walkthrough boundary
 
+Milestone 6 local delivery adds UTC creation-date filtering, oldest-unresolved controls, real browser polling acceptance and a visually verified one-page PDF. Vercel configuration/handoff is prepared; publication is deferred by user choice until local review and selection of the demo Supabase project. Never present this as a deployed demo yet.
+
+Explain date semantics: selected dates are UTC calendar days; From includes its midnight and Through excludes midnight of the following day. This avoids end-of-day precision/DST bugs. Unresolved means OPEN/IN_PROGRESS, without inventing a new lifecycle status or aging SLA. Oldest ordering is deterministic by timestamp then UUID. Parameterized SQL uses the same filters for page rows and total count.
+
+The real Edge delivery test uses separate author/admin contexts and no intercepted APIs. It covers creation, private notes, reviewed sends, replies appearing by active-tab polling, resolved attention and closed read-only UI. Keep this distinct from the preview-only test, which uses synthetic intercepted APIs. Supabase and OpenAI credentials remain server-only; Vercel build must never run privileged setup, and a bundled public CA is not a secret or permission bypass. Final deployment requires real HTTPS/cookie/origin/DB verification.
+
 Milestones 2–4 were reviewed by the user. Milestone 5 adds bounded structured classification, real/MOCK providers, KB-grounded draft caching and admin editing/sending. See TESTING for independently executed checks versus user-reported results.
 
 AI walkthrough: follow create-ticket-with-ai.ts after the ticket transaction returns, then services/ai.ts, repositories/ai.ts and ai/providers.ts. Explain why one eight-second provider attempt is awaited after persistence rather than dispatched as an unawaited promise. If a provider or bookkeeping write fails, the existing ticket still returns; a PENDING/RUNNING record can be retried explicitly. AI updates never include manual columns, so manual decisions survive a concurrent classification.
