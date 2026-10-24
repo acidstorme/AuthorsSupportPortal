@@ -22,6 +22,10 @@ for (const path of ["/author", "/admin", "/author/tickets/new", "/author/tickets
 }
 await check("/admin/tickets/11111111-1111-4111-8111-111111111111", 307);
 for (const [suffix, method] of [["", "PATCH"], ["/assignment", "PUT"], ["/assignment", "DELETE"], ["/notes", "POST"], ["/acknowledge", "POST"]]) await check(ticketPath + suffix, 401, { method, headers: { Origin: origin, "Content-Type": "application/json" }, body: method === "DELETE" ? undefined : "{}" });
+for (const suffix of ["/draft", "/classification"]) {
+  await check(ticketPath + suffix, 401, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{}" });
+  await check(ticketPath + suffix, 405);
+}
 await check("/api/auth/login", 403, { method: "POST", headers: { Origin: "https://untrusted.example.invalid", "Content-Type": "application/json" }, body: "{}" });
 await check("/api/auth/login", 422, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{}" });
 await check("/api/auth/login", 400, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{" });

@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSessionCookie, sessionCookieOptions } from "@/server/auth/cookie-policy";
-import { getServerEnv } from "@/server/config/env";
+import { getCoreServerEnv } from "@/server/config/env";
 
 // Refresh only. Every protected page/API independently verifies identity and DB role.
 export async function proxy(request: NextRequest) {
@@ -9,7 +9,7 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/auth/") || !request.cookies.getAll().some(({ name, value }) => value && isSessionCookie(name, process.env.SUPABASE_PROJECT_REF))) return NextResponse.next();
   let response = NextResponse.next({ request });
   try {
-    const env = getServerEnv();
+    const env = getCoreServerEnv();
     const client = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
       cookieOptions: sessionCookieOptions(env.APP_URL),
       global: { fetch: (url, options) => fetch(url, { ...options, cache: "no-store", signal: options?.signal ?? AbortSignal.timeout(10_000) }) },

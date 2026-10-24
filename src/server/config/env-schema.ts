@@ -17,7 +17,7 @@ export const runtimeEnvSchema = publicEnvSchema.extend({
   DATABASE_URL: databaseUrlSchema,
   AI_MODE: z.enum(["mock", "openai"]).default("mock"),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_MODEL: z.string().min(1).default("gpt-4o-mini"),
+  OPENAI_MODEL: z.string().min(1).max(100).default("gpt-4o-mini"),
 }).superRefine((env, ctx) => {
   if (safeUrl(env.NEXT_PUBLIC_SUPABASE_URL)?.hostname !== `${env.SUPABASE_PROJECT_REF}.supabase.co`) {
     ctx.addIssue({ code: "custom", path: ["NEXT_PUBLIC_SUPABASE_URL"], message: "Auth URL must match SUPABASE_PROJECT_REF" });
@@ -47,6 +47,12 @@ export function databaseMatchesProject(value: string, projectRef: string) {
 
 export function parseRuntimeEnv(source: NodeJS.ProcessEnv) {
   return runtimeEnvSchema.parse(source);
+}
+// Auth/database must remain available when optional AI configuration is broken.
+// All project, role and TLS checks are retained; these returned AI placeholders
+// are never used by the AI provider, which calls parseRuntimeEnv separately.
+export function parseCoreEnv(source: NodeJS.ProcessEnv) {
+  return runtimeEnvSchema.parse({ ...source, AI_MODE: "mock", OPENAI_MODEL: "core-only", OPENAI_API_KEY: undefined });
 }
 
 export function parseMigrationEnv(source: NodeJS.ProcessEnv, target: string | undefined) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMigrationEnv, parseRuntimeEnv } from "../../src/server/config/env-schema";
+import { parseMigrationEnv, parseRuntimeEnv, parseCoreEnv } from "../../src/server/config/env-schema";
 import { z } from "zod";
 
 const project = "abcdefghijklmnopqrst";
@@ -23,6 +23,13 @@ describe("environment configuration", () => {
   });
   it("requires a key when real AI is explicitly selected", () => {
     expect(() => parseRuntimeEnv({ ...fixture(), AI_MODE: "openai" })).toThrow();
+  });
+  it("keeps core Auth/DB available without AI credentials while preserving role and TLS guards", () => {
+    const source: NodeJS.ProcessEnv = { ...fixture(), AI_MODE: "openai", OPENAI_API_KEY: undefined };
+    expect(parseCoreEnv(source).DATABASE_URL).toBe(source.DATABASE_URL);
+    expect(() => parseRuntimeEnv(source)).toThrow();
+    expect(() => parseCoreEnv({ ...source, DATABASE_URL: source.DATABASE_URL!.replace("bookleaf_runtime.", "postgres.") })).toThrow();
+    expect(() => parseCoreEnv({ ...source, DATABASE_URL: source.DATABASE_URL!.replace("verify-full", "disable") })).toThrow();
   });
   it("rejects Auth and database project mismatches", () => {
     expect(() => parseRuntimeEnv({ ...fixture(), NEXT_PUBLIC_SUPABASE_URL: "https://xxxxxxxxxxxxxxxxxxxx.supabase.co" })).toThrow();

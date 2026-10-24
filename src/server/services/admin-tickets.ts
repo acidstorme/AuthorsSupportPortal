@@ -8,6 +8,7 @@ import { ticketDto } from "./tickets";
 export function adminTicketDto(ticket: AdminTicket): AdminTicketDto {
   return { ...ticketDto(ticket), author: ticket.author, book: ticket.book, assignedTo: ticket.assignedTo,
     manualCategory: ticket.manualCategory, manualPriority: ticket.manualPriority, aiCategory: ticket.aiCategory, aiPriority: ticket.aiPriority, aiStatus: ticket.aiStatus,
+    aiProvider: ticket.aiProvider, aiModel: ticket.aiModel, aiErrorCode: ticket.aiErrorCode,
     resolvedAuthorReplyAt: ticket.resolvedAuthorReplyAt?.toISOString() ?? null,
     needsAttention: Boolean(ticket.resolvedAuthorReplyAt && (!ticket.authorReplySeenAt || ticket.resolvedAuthorReplyAt > ticket.authorReplySeenAt)) };
 }

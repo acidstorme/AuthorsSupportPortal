@@ -1,5 +1,5 @@
 # AI integration boundary
 
-Reserved for later milestones. The OpenAI SDK is installed but no provider calls, mock provider, prompts or classification implementation exist yet.
+Milestone 5 implements structured classification and grounded response drafting via real OpenAI Responses and deterministic MOCK providers. knowledge-base.ts transcribes assignment policies with explicit unsupported-action limitations; contracts.ts owns schemas/grounding rules. Providers see only scoped public context and selected KB, not notes/contact fields. Ticket text is untrusted; no tools are granted.
 
-Providers will expose classification and drafting contracts, receive only scoped ticket context and selected Knowledge Base sections, and use structured output validation. Real and deterministic mock outputs must be visibly distinguished. See `docs/AI_DESIGN.md`.
+Services/repositories handle claims, caching/fingerprints, manual precedence and conditional completion independently of providers. Real mode uses server-only credentials, store:false, no SDK retries and eight/fifteen-second deadlines. Failure never silently becomes mock output. See docs/AI_DESIGN.md and TESTING for exact behavior, cost and limits.

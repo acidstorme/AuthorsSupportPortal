@@ -1,6 +1,6 @@
 # Consolidated implementation plan
 
-Status: Milestones 2 and 3 reviewed by the user. Milestone 4 implements admin queue/filtering, self-assignment, manual triage, explicit status changes/reopening, private notes, history and resolved-reply attention. See TESTING for executed checks and hosted limitations. Stop for Milestone 4 review before AI. The pasted Milestone 2 instructions supersede previous identity/password choices.
+Status: Milestones 2–4 reviewed by the user. Milestone 5 implements bounded classification, real/MOCK providers, faithful fixed KB grounding, persisted draft cache/fingerprint, manual editing and explicit sending. See TESTING for exact local/hosted/live checks. Stop for Milestone 5 review before delivery/deployment. The pasted Milestone 2 instructions supersede previous identity/password choices.
 
 ## Delivery and acceptance
 
@@ -51,6 +51,8 @@ Use the exact ten source email.com Auth logins, explicitly approved by the user 
 Setup requires matching target/project approval, applied migrations, disabled signup, restricted runtime permissions, the reviewed no-mail function and separate confirmation that Send Email hook activation was verified. Keep DEMO_EMAIL_DISABLED_CONFIRMED=false and do not provision until both safety checks are complete. Existing identities require exact trusted markers and compatible DB mappings. Stop on conflicts; never reset passwords, promote roles, reassign UUIDs or delete accounts as compensation. Recovery spans Auth calls and Prisma transactions.
 
 ## Source ambiguities and explicit defaults
+
+- PDF recheck during Milestone 5 confirms admin queue date filtering and easy oldest-unresolved visibility are required. Existing newest/updated/priority sorting does not fully cover this; record as a Milestone 6 delivery gap, not a completed feature.
 
 - Attachments: PDF explicitly says UI-only and actual upload is a bonus. Disabled honest placeholder is compliant; future provider is R2, never Supabase Storage.
 - Source contains 16 published titles and two in production; show all owned books, preserving nulls and empty platform arrays.

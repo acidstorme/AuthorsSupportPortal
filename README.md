@@ -1,16 +1,33 @@
 # BookLeaf Author Support & Communication Portal
 
-A Next.js App Router modular monolith using TypeScript, Tailwind/shadcn UI, Prisma, hosted Supabase Auth/PostgreSQL, Zod and TanStack Query. OpenAI integration is planned for a later milestone.
+A Next.js App Router modular monolith using TypeScript, Tailwind/shadcn UI, Prisma, hosted Supabase Auth/PostgreSQL, Zod, TanStack Query and OpenAI, with deterministic mock mode.
 
-## Current status — Milestone 4
+## Current status — Milestone 5
 
 Implemented in code: shared email/password login, logout, server-side session refresh, HTTP-only cookies, verified Auth identity and database role lookup, protected author/admin landing pages, own-book lists and scoped book APIs, trusted author provisioning/two-admin bootstrap, idempotent source import and setup verification.
 
-The user reviewed Milestones 2 and 3: hosted setup, author/admin access and author ticket core. Milestone 4 adds the admin queue, effective category/priority filters, self-assignment, manual triage, explicit lifecycle controls, private notes, audit history and resolved-reply attention. See [TESTING](docs/TESTING.md) for independently executed checks and remaining gaps.
+The user reviewed Milestones 2–4. Milestone 5 adds awaited best-effort classification after ticket persistence, admin retries, grounded cached response drafts, explicit regeneration and an editable admin-reviewed send flow. Real OPENAI and deterministic MOCK providers are visibly distinguished in the admin UI. See [TESTING](docs/TESTING.md) for exact checks and remaining gaps.
 
-AI classification/drafts, deployment, uploads and ticket linking remain deferred. New tickets are OPEN and awaiting triage; admins can classify manually. No AI runs yet. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
+Deployment, uploads and ticket linking remain deferred. New tickets are OPEN; AI failure leaves them available for manual triage. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
 
 ## Prerequisites and first run
+
+### Review Milestone 5
+
+Keep `AI_MODE=mock` for repeatable local review. Create a ticket as an author, open it as an admin and inspect the MOCK classification/proposed draft. Edit the response and explicitly send; the author should see only the sent text. Reopening the admin detail reuses the saved draft; changed context marks it stale and requires explicit regeneration. Ordinary five/ten-second polling never invokes generation. Requests attempted within thirty seconds of another attempt return a cooldown error; manual writing stays available. CLOSED must be reopened before drafting/sending.
+
+Regenerated drafts automatically fill an empty editor. If it contains text, that text stays intact and an AI generated response one-line preview appears below the draft buttons. View opens the complete read-only response; Use generated text in editor explicitly replaces the editor. The focused system-Edge browser regression is `npm run test:ai:composer -- development` (requires the local app, configured admin and installed Edge; ticket/AI requests are intercepted).
+
+For real calls set `AI_MODE=openai`, `OPENAI_API_KEY` and your approved `OPENAI_MODEL` in ignored .env.local, then restart Next.js. The current default gpt-4o-mini alias passed a real smoke on 24 October 2026 but is listed as deprecated by OpenAI; it remains configurable and was retained with user approval. Real failure never silently falls back to mock. Core Auth/DB remain usable if optional AI configuration is invalid, while `npm run env:check` deliberately flags that configuration.
+
+No new database migration, grant, account provisioning or seed is needed. To apply CA trust, set it in **each shell before Node starts** (putting it only in .env.local is too late for Node's startup trust):
+```powershell
+$env:NODE_EXTRA_CA_CERTS = (Resolve-Path .\certs\prod-ca-2021.crt).Path
+npm run dev
+```
+This project-specific CA path passed the agent's hosted safety check. Keep sslmode=verify-full. For another project, obtain its trusted certificate through Supabase rather than disabling verification.
+
+With the app running, `npm run test:ai:hosted -- development` verifies the deterministic workflow against hosted Auth/PostgreSQL and retains one labelled test ticket/draft/reviewed reply. Both app/test processes must use mock mode and the same APP_URL. `npm run test:ai:live -- live` makes **two paid synthetic requests** using the existing configured model/key (no author records or DB writes); the final live argument is required. It prints the synthetic draft for human grounding review, not credentials. Neither command provisions accounts or sends email.
 
 ### Review Milestone 4
 
@@ -27,7 +44,7 @@ With the reviewed hosted setup already seeded, run `npm run dev`, sign in as an 
 - Node.js 22.12+ in 22.x, or 24.x; tested runtime is 22.17.0 (`.nvmrc`).
 - npm 10+; npm 11.5.2 previously hit an installation resolver bug. A clean lockfile install succeeded using npm 11.21.1.
 - An isolated hosted Supabase project; prefer separate development and deployed-demo projects. No Docker or local Supabase/PostgreSQL.
-- OpenAI credentials are unnecessary through Milestone 4.
+- OpenAI credentials are unnecessary in mock mode; real mode requires a private server-side key and account/model access.
 
 ```bash
 npx --yes npm@11.21.1 ci
@@ -130,7 +147,7 @@ Authors land at `/author` and see their identity and books. Both admins land at 
 | DEMO_ADMIN_PASSWORD | Approved initial admin password; example defaults to Bookleaf123 |
 | DEMO_APPROVED_PROJECT_REF | Explicit approval of an isolated demo project |
 | DEMO_EMAIL_DISABLED_CONFIRMED | false until hook installation AND dashboard activation verified |
-| AI_MODE | mock default or openai; AI behavior not implemented yet |
+| AI_MODE | mock default (deterministic labelled tests) or openai (real paid calls) |
 | OPENAI_MODEL | Planned default gpt-4o-mini |
 | OPENAI_API_KEY | Required by validation only in openai mode; no M2 AI calls |
 
@@ -159,6 +176,8 @@ Only public Supabase URL/key are browser-safe; the M2 client does not instantiat
 | npm run test:smoke | Anonymous local HTTP checks against a running app; no hosted calls |
 | npm run test:tickets:hosted -- development | Opt-in hosted ticket checks; retains two labelled demo tickets/two replies |
 | npm run test:admin:hosted -- development | Opt-in hosted admin/lifecycle checks; retains one labelled ticket/note/replies/history |
+| npm run test:ai:hosted -- development | Hosted MOCK AI workflow; retains a labelled ticket/draft/reviewed reply |
+| npm run test:ai:live -- live | Two paid synthetic provider calls; no Auth/DB or author records |
 | npm run dev | Local development server |
 | npm run build / start | Build / run production locally |
 
@@ -178,10 +197,10 @@ Hosted HTTP tests use Playwright's request client and need no downloaded browser
 - **Logout:** clears all local session-cookie chunks and revokes that refresh session. Already issued access JWTs may remain valid until expiry; this is not an application-wide immediate revocation system.
 - **Windows sandbox:** native Next path resolution and Vitest cache operations required elevated tool execution during verification.
 - **Dependency audit:** M1 recorded five high dev-only Next ESLint/glob/braces findings and zero production findings. No new dependency was added in M2; review current advisories before delivery.
-- **Deferred:** AI, R2 attachments, ticket links, full accounting, password recovery/self-registration, deployment. Hosted ticket integration has been blocked by certificate trust in the agent process; see TESTING for latest executed results. Mocked ownership/lifecycle tests do not establish real PostgreSQL concurrency.
+- **Deferred:** R2 attachments, ticket links, full accounting, password recovery/self-registration, deployment. See TESTING for actual hosted results versus mocked tests. Broad live-model accuracy/adversarial evaluation and browser E2E coverage remain delivery work; human review is mandatory.
 
 ## Documentation
 
 [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [AI design](docs/AI_DESIGN.md) · [Tests/results](docs/TESTING.md) · [Decisions](docs/DECISIONS.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [One-page write-up draft](docs/WRITEUP.md)
 
-Milestone 4 stops for review before Milestone 5 structured AI classification and grounded, editable, cached response drafts.
+Milestone 5 stops for review before Milestone 6 delivery hardening, focused browser checks, deployment and final documentation/write-up verification. Rechecking the original PDF also identified queue date-range filtering/oldest-unresolved visibility as delivery gaps; they are not claimed complete by the existing newest/updated/priority controls.

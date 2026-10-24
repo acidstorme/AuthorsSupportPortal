@@ -1,5 +1,40 @@
 # Testing and verification
 
+## Draft preview UX follow-up — 24 October 2026
+
+- Lint, TypeScript and production build passed for the updated composer.
+- `npm run test:ai:composer -- development`: PASS using installed system Edge in headless mode, against a temporary localhost:3107 production server.
+- Browser scenarios: initial/empty/whitespace-only autofill; autofill after sending; non-empty editor preserved; one-line preview; View/read-only full-text modal; explicit Use generated text replacement; Escape dismissal; typing and clearing while a draft request is in flight.
+- The browser test uses the existing configured admin for real login/SSR but intercepts all ticket/draft/message APIs with synthetic fixtures. It performs no model calls, ticket writes, account provisioning or email operations. This verifies actual editor/modal interaction, not live AI quality or the entire portal's browser behavior.
+- Repeat with a local app at APP_URL, CA trust exported before startup, and system Edge installed: `npm run test:ai:composer -- development`. Chromium remains undownloaded; Edge is used through Playwright's msedge channel. Prior Milestone 5 statements about missing browser coverage are historical; this focused interaction now has browser coverage.
+
+## Milestone 5 verification — 24 October 2026
+
+Milestone 4 was verified/reviewed by the user. The supplied certs/prod-ca-2021.crt, exported through NODE_EXTRA_CA_CERTS **before Node startup**, resolved agent certificate trust. No migration, grant, Auth provisioning, password reset or source-data modification was needed.
+
+| Check | Executed result |
+|---|---|
+| npm run check | PASS: lint, generated/TypeScript validation, 132 tests in 24 suites, Prisma schema validation and production build |
+| npm run setup:safety with supplied CA | PASS: restricted runtime identity, no user UPDATE, no elevated role flags, reviewed no-mail function/rejection and disabled signup; dashboard activation remains user-confirmed |
+| npm run test:smoke -- http://localhost:3105 | PASS: 35 actual anonymous HTTP checks, including admin-only AI POST denial and GET 405 |
+| npm run test:ai:hosted -- development | PASS after timestamp fix: real hosted Auth/DB, MOCK classification, saved cache, cooldown, stale context/manual precedence, no auto-send and reviewed reply visible to author |
+| npm run test:admin:hosted -- development | PASS with AI enabled: both admins, actual queue filters, assignment/manual triage, private notes/retries, RESOLVED attention, close/reply race, CLOSED rejection, reopening and audit history |
+| npm run test:ai:hosted -- development failure | PASS against a separate app with AI_MODE=openai / OPENAI_API_KEY=replace-me: login, saved ticket, FAILED classification, sanitized draft failure and successful manual public reply |
+| npm run test:ai:live -- live | PASS: two authorized synthetic paid requests using configured gpt-4o-mini (resolved gpt-4o-mini-2024-07-18), ISBN_METADATA_ISSUES/HIGH and grounded draft; no author records submitted |
+| Chromium executable probe | Not installed; browser-driven editor/polling tests remain unverified |
+
+The first hosted AI cache test found a generation timestamp mismatch between the initial response and persisted/cache response. Fixed by passing one completion timestamp through persistence/serialization; a regression assertion was added and the hosted rerun passed. Earlier local attempts also exposed a stale session-refresh mock after separating core/AI environment validation and a test ProcessEnv annotation; both were corrected before the complete passing check.
+
+Real provider usage: classification 221 input/14 output tokens; draft 636 input/151 output. Synthetic draft was manually inspected: it requested correct ISBN/listing evidence, proposed review/escalation and made no false completed-action or resolution-date claim. This is a connectivity/schema/grounding smoke, not an accuracy score or broad adversarial eval. See AI_DESIGN for dated pricing estimate and limitations. No raw provider errors, keys, tokens or author prompts were logged.
+
+Retained records: the initial failed cache test left one labelled Milestone 5 ticket/cached draft with no sent reply; the passing rerun retained ticket 2b970dac-6d5d-4278-bc22-104f67322e74 and one reviewed reply; admin regression retained 6732f122-eecb-4a74-b6d8-7f1bacd02d60 plus private note/replies/history; deliberate AI failure retained d21fb4c2-3605-4d18-9242-111612819f32 and one manual reply. These are synthetic fixtures in the approved development project; none were deleted or used to reset source records. Temporary servers used ports 3105/3106 and are stopped after verification. Shell-only overrides did not modify .env.local.
+
+The temporary mock server emitted a pg deprecation warning about queuing a query while its client is already executing one (removal planned for pg 9). The concurrent HTTP tests still passed on the installed pg version; no driver upgrade or warning suppression was made. Review this before a future major driver upgrade.
+
+Tests added: all six categories/four priorities; selected/multi-topic KB; below-threshold/unknown financial data and production nulls; prompt-injection instructions treated as data; mocked real SDK strict schema, refusal/incomplete/timeout handling, output bounds and no tools/storage; core Auth/DB safety despite invalid optional AI; current-claim-only AI writes without manual columns; guarded draft claims/cache preservation; fingerprint changes; context changes during generation; admin-only POST guards; persistence-before-AI and replay without another call. These deterministic checks do not prove semantic safety for arbitrary real model output.
+
+To repeat the optional failure scenario, start a **separate shell/app process** with APP_URL matching an unused port, AI_MODE=openai and OPENAI_API_KEY=replace-me. In a test shell use that same APP_URL, AI_MODE=mock for preflight, export the CA, and run `npm run test:ai:hosted -- development failure`. Do not change your saved credentials to create this fixture. The normal hosted AI test requires mock mode in both processes. The live test requires an explicit final `live` argument and makes two paid synthetic requests without DB/Auth operations.
+
 ## Milestone 4 verification — 24 October 2026
 
 Milestones 2 and 3 were reviewed by the user. No migration, seed, runtime grant, credential or Auth configuration change was made for this milestone.
@@ -114,11 +149,12 @@ Do not create conflicting disposable users in the real demo merely to exercise n
 
 ## Remaining gaps
 
-- Hosted migration/SQL execution, runtime-role permissions, active email hook and CA-backed DB connectivity.
-- Real Auth creation, idempotency/recovery and exact DB round trips.
-- Actual authenticated login/session refresh/logout and ownership behavior; real expiry/refresh timing is not proven by the mocked proxy test.
+- Full account provisioning/recovery rerun was user-verified in Milestone 2, not repeated destructively during AI work. No account password reset or role reassignment is claimed/tested.
+- Real expiry/refresh timing is not proven by mocked proxy tests or short HTTP sessions.
 - Full browser Playwright UI flows; current real-HTTP smoke/harness does not replace browser interaction coverage.
-- Ticket APIs/lifecycle, private-note isolation, AI behavior and polling are deferred, not implemented/tested.
+- Broad real-model accuracy/adversarial evaluation, long-conversation quality and account-level AI budget enforcement; current live check is one synthetic ISBN case.
+- Browser-observed polling/edit preservation; HTTP service tests do not replace UI interaction coverage.
+- Assignment-required queue date range and oldest-unresolved visibility need delivery follow-up; newest/updated/priority controls alone do not satisfy these fully.
 - Live demo/deployment and Node 24 compatibility.
 - Final write-up render check; its short draft will be rendered at delivery.
 

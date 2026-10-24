@@ -1,13 +1,13 @@
 import "server-only";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { getServerEnv } from "@/server/config/env";
+import { getCoreServerEnv } from "@/server/config/env";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export function getDb() {
   if (!globalForPrisma.prisma) {
-    const env = getServerEnv();
+    const env = getCoreServerEnv();
     const adapter = new PrismaPg({
       connectionString: env.DATABASE_URL,
       max: 5,

@@ -2,7 +2,17 @@
 
 ## Current walkthrough boundary
 
-Milestones 2 and 3 were reviewed by the user. Milestone 4 adds admin queue/filtering, assignment, manual triage, explicit lifecycle management, private notes/history and attention. AI remains future work. See TESTING for independently executed checks versus user-reported results.
+Milestones 2–4 were reviewed by the user. Milestone 5 adds bounded structured classification, real/MOCK providers, KB-grounded draft caching and admin editing/sending. See TESTING for independently executed checks versus user-reported results.
+
+AI walkthrough: follow create-ticket-with-ai.ts after the ticket transaction returns, then services/ai.ts, repositories/ai.ts and ai/providers.ts. Explain why one eight-second provider attempt is awaited after persistence rather than dispatched as an unawaited promise. If a provider or bookkeeping write fails, the existing ticket still returns; a PENDING/RUNNING record can be retried explicitly. AI updates never include manual columns, so manual decisions survive a concurrent classification.
+
+The provider uses the installed OpenAI Responses SDK and strict enum-only Structured Outputs. Shape is validated again with Zod; schema compliance is not proof of correct triage. Real errors never silently turn into mock content. Mock uses deterministic keyword rules and an explicit UI label; the live smoke is a small synthetic ISBN check, not a broad quality benchmark. The configured model alias was retained with user approval despite its official deprecation label; future model migration needs evaluation.
+
+For drafts, show the fixed faithful Knowledge Base and groundingRules. Policies and verified book snapshots are evidence; author text and previous messages remain untrusted. Examples asking for completed escalation or specific payout dates conflict with unavailable facts, so prompts propose next steps instead. No action tools are provided. Phone/contact fields and private notes are not loaded into context; user-written ticket text may still contain personal data.
+
+Describe cache economics: latest six public replies at 1000 characters each, original query, relevant KB sections and bounded output; fingerprint context plus model/provider/versions. Reopening returns saved text without paying. Changed context labels it stale instead of regenerating on polling. Explicit regeneration respects a thirty-second per-task cooldown, and started timestamps reject superseded completions. A small timestamp mismatch found by hosted tests was fixed so first/cached responses share the same stored generation time.
+
+The editor is checked when the draft arrives: empty/whitespace-only text fills automatically, while existing text is preserved and gets a one-line AI generated response preview. View opens the full read-only modal; only Use generated text in editor replaces existing text. This handles typing/clearing during generation without a sticky edited/sent flag. Sending uses the ordinary message service and retry UUID, so generation alone cannot send or bypass closed-ticket policy. Failed AI still permits manual replies because core Auth/DB validation is independent of optional provider configuration. Account-wide spend limits, full adversarial evaluations and durable background processing remain production improvements, not implemented claims.
 
 Admin walkthrough: /admin -> GET /api/admin/tickets -> ADMIN check -> validated filters -> parameterized queue repository. COALESCE selects each manual override independently, and PostgreSQL's CRITICAL/HIGH/MEDIUM/LOW enum order gives urgency sorting with nulls last. Original category labels are mapped explicitly at the SQL boundary because Prisma identifiers differ from stored enum labels.
 

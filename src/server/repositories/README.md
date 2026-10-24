@@ -1,5 +1,5 @@
 # Database repositories
 
-Repositories implement identity selection, scoped books, author tickets/messages and admin queue/mutations/private history. Status and reply transactions use the same ticket row lock. Effective manual-over-AI filters/sorts use parameterized SQL; note retries use the existing note UUID. Mutations and events commit atomically; no-ops generate no events. Public DTOs omit private notes and AI draft/error fields. AI remains future work.
+Repositories implement identity/books, author/admin ticket operations and AI context/claims/completion. Status/reply transactions share a row lock. AI context is scoped/bounded public data; claims use existing timestamps with thirty-second cooldown and stale-completion guards. AI-only updates never include manual fields. Public DTOs omit private notes/drafts/errors; admin triage exposes only sanitized classification errors. No provider request runs inside a transaction.
 
 Repositories use the server-only lazy Prisma client. Author queries must include their author scope in the query, including nested resources. Raw SQL must be parameterized. Return selected fields for explicit DTO mapping rather than exposing complete Prisma records.

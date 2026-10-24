@@ -29,6 +29,9 @@
     "test:hosted": "tsx scripts/test-hosted.ts",
     "test:tickets:hosted": "tsx scripts/test-tickets-hosted.ts",
     "test:admin:hosted": "tsx scripts/test-admin-hosted.ts",
+    "test:ai:hosted": "tsx scripts/test-ai-hosted.ts",
+    "test:ai:live": "node --conditions=react-server --import tsx scripts/test-ai-live.ts",
+    "test:ai:composer": "tsx scripts/test-ai-composer-browser.ts",
     "test:smoke": "tsx scripts/test-local.ts",
     "postinstall": "prisma generate"
   },

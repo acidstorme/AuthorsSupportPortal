@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented: authentication, current user, scoped books, author tickets/public messages and Milestone 4 admin queue, triage, assignment, status changes, notes, history and attention acknowledgement. Milestones 2 and 3 were reviewed by the user. Tests distinguish mocked service/transaction boundaries from actual HTTP checks; see TESTING for hosted limitations. AI endpoints remain planned.
+Implemented: authentication, scoped books, author/admin tickets, lifecycle/private history and Milestone 5 classification/draft endpoints. Milestones 2–4 were reviewed by the user. Tests distinguish mocked boundaries, hosted HTTP and live-provider checks; see TESTING for exact results and remaining gaps.
 
 All implemented handlers use the Node.js runtime. They validate/authorize and delegate to services/repositories. Cookie authentication is required; Bearer-only clients are not supported.
 
@@ -21,7 +21,7 @@ Validation errors include `fieldErrors`. Provider errors, passwords, keys, JWTs,
 | 400 | Malformed JSON or wrong content type |
 | 401 | Missing/expired session, invalid login |
 | 403 | Role/origin denied, incomplete application mapping, author filter forbidden |
-| 404 | Missing or invisible book |
+| 40 | Missing or invisible book |
 | 413 | Request JSON exceeds 16 KiB |
 | 422 | Invalid fields/enums/query/path or unknown JSON fields |
 | 429 | Auth provider throttling |
@@ -95,7 +95,7 @@ Ticket DTO example (also used by detail/list):
 ```json
 {"id":"22222222-2222-4222-8222-222222222222","bookId":"BK001","subject":"Book availability question","description":"Please help me check this listing.","status":"OPEN","category":null,"priority":null,"createdAt":"2026-10-23T12:00:00.000Z","updatedAt":"2026-10-23T12:00:00.000Z"}
 ```
-Category/priority are effective manual-over-AI values, otherwise null. No notes, draft text, internal errors or private audit metadata appear. Classification is not implemented yet; creation does not call AI. Description is stored on the ticket, not duplicated as a first reply.
+Category/priority are effective manual-over-AI values, otherwise null. No notes, draft text, internal errors or private audit metadata appear. New creation persists first, then awaits one bounded classification attempt; AI failure does not fail creation. The response is the original persisted DTO, so detail/list requests reveal the latest AI/manual values. Matching creation retries do not run AI again. Description is stored on the ticket, not duplicated as a first reply.
 
 ### GET /api/tickets/:ticketId
 Owner or ADMIN, public DTO under data; validates UUID, returns 422 for malformed IDs. Author pages: /author/tickets/new and /author/tickets/:ticketId. Page APIs perform the ownership checks independently of page guards.
@@ -128,7 +128,7 @@ Returns `{data:<adminTicket>}`. Public ticket fields plus:
 ```json
 {"author":{"authorId":"AUTH001","name":"Priya Sharma","email":"priya.sharma@email.com"},"book":null,"assignedTo":null,"manualCategory":null,"manualPriority":"HIGH","aiCategory":null,"aiPriority":null,"aiStatus":"PENDING","needsAttention":true,"resolvedAuthorReplyAt":"2026-10-24T00:00:00.000Z"}
 ```
-Example shows only additional fields. No AI draft/error fields or note bodies are included. Private history is fetched separately. needsAttention compares the last author reply sent while RESOLVED with the shared acknowledged timestamp. The marker remains until an explicit acknowledgement, including across reopening/other status changes. Detail polls every five seconds while active. Admin detail page: /admin/tickets/:ticketId.
+Example shows only additional fields. Milestone 5 also returns aiProvider (MOCK/OPENAI/null), aiModel and sanitized aiErrorCode for admin triage. No draft text, raw provider errors or note bodies are included. Private history/drafts are fetched separately. needsAttention compares the last author reply sent while RESOLVED with the shared acknowledged timestamp. The marker remains until explicit acknowledgement, including across reopening/other status changes. Detail polls every five seconds while active. Admin detail page: /admin/tickets/:ticketId.
 
 ### PATCH /api/tickets/:ticketId
 
@@ -164,11 +164,24 @@ Query page/pageSize as above, newest first with UUID tie-breaker. Returns `{data
 
 Body: `{"observedReplyAt":"2026-10-24T00:00:00.000Z"}` copied from the admin detail's resolvedAuthorReplyAt. Returns 200 `{data:<adminTicket>}` and records AUTHOR_REPLY_ACKNOWLEDGED when needed. If no matching author reply exists or a newer reply has arrived, returns 409 ATTENTION_CHANGED; refresh/review before retrying. Lock and timestamp comparison prevent acknowledging an unseen concurrent reply. Matching repeated acknowledgement is a no-op. Acknowledgement is shared between admins and never changes status.
 
-## Planned AI API — not implemented
+## AI API — implemented in Milestone 5
 
-| Method/path | Access and intended behavior |
-|---|---|
-| POST /api/tickets/:id/classification | ADMIN; bounded explicit retry |
-| POST /api/tickets/:id/draft | ADMIN; valid cache or generation; optional explicit regeneration |
+Both endpoints require ADMIN, same-origin JSON and a valid UUID path. Anonymous 401, AUTHOR 403, malformed request/extra keys 422, missing ticket 404. They use the Node runtime with maxDuration=60; provider deadlines are shorter, but host execution limits must still be checked at deployment. AI work is awaited; there is no detached serverless background task. No attachments/linking endpoints exist.
 
-Create bodies never accept role/author/sender identity. Manual values override AI independently; neither means awaiting triage. No attachments/linking endpoints exist. No AI generation is triggered by current admin opening, rendering or polling.
+### POST /api/tickets/:ticketId/classification
+
+Body `{}`. Explicit classification/retry based on the original subject/description. Returns 200:
+```json
+{"data":{"status":"SUCCEEDED","provider":"MOCK","model":"deterministic-v1","category":"ROYALTY_PAYMENTS","priority":"CRITICAL"}}
+```
+Updates only AI fields, provenance/status and a corresponding event. Manual overrides are preserved independently. Each attempt uses a conditional timestamp claim; running/recent work returns 429 AI_COOLDOWN (retry after thirty seconds from the prior attempt). Stale completion returns 409 AI_STALE. Provider/refusal/timeout/invalid output or bad AI configuration returns sanitized 503 AI_UNAVAILABLE; when possible an AI_CLASSIFICATION_FAILED event/status is persisted. Existing successful AI values are retained on failure, and the ticket remains manually manageable. New ticket creation invokes this service after persistence without requiring ADMIN, under the creation service's trusted flow; only this explicit HTTP retry is admin-only.
+
+### POST /api/tickets/:ticketId/draft
+
+Body `{}` or `{"regenerate":false}` retrieves/creates a proposal. `{"regenerate":true}` explicitly generates a replacement, subject to the same per-ticket/task thirty-second claim/cooldown. Response:
+```json
+{"data":{"text":"Thank you for raising your concern…","provider":"MOCK","model":"deterministic-v1","generatedAt":"2026-10-24T06:00:00.000Z","stale":false,"cached":true}}
+```
+One persisted draft is cached against original query, status, bounded public history/omission metadata, book facts, effective classification and provider/model/prompt/KB versions. A cache hit makes no provider call; existing stale text is returned with stale:true without automatic regeneration. Changed context while generating returns 409 DRAFT_CONTEXT_CHANGED; superseded claim 409 AI_STALE. CLOSED returns 409 TICKET_CLOSED. Running/recent attempt returns 429 AI_COOLDOWN. Provider/configuration failure returns 503 AI_UNAVAILABLE and retains a manual composer and any previous cache. No GET method is provided (405); private/no-store still applies even though the application maintains a server-side draft cache.
+
+Admin opening issues this POST once; polling/refocus never issue it. Arriving drafts fill an empty editor; non-empty text is preserved with a one-line preview and View popup for explicit replacement. No API contract changes are needed for this UI behavior. The UI labels MOCK explicitly. Editing/sending is separate: POST /api/tickets/:ticketId/messages with reviewed body and retry UUID is the only public send operation. Draft generation never adds public messages or changes status.

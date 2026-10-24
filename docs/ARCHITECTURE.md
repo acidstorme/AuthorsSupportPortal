@@ -2,7 +2,11 @@
 
 ## Implementation status
 
-Milestones 2 and 3 were reviewed by the user. Milestone 4 adds admin queue/filtering, manual triage, self-assignment, explicit lifecycle changes, private notes/history and resolved-reply attention. AI is still planned. Tests distinguish mocked integration boundaries from hosted HTTP checks.
+Milestones 2–4 were reviewed by the user. Milestone 5 adds real/MOCK AI providers, post-persistence classification and cached grounded admin drafts with editable explicit send. Tests distinguish mocked boundaries, hosted HTTP and live provider checks; see TESTING.
+
+AI flow: ticket transaction commits -> one awaited classification claim -> provider outside transaction -> conditional AI-only update/event. Failure never rolls back the saved ticket; manual fields are never in AI updates. Explicit admin retries use a per-ticket thirty-second claim/cooldown. Auth/database use core configuration validation independent of optional AI settings, preserving every role/project/TLS check while allowing manual support when AI is misconfigured.
+
+Admin opening -> one POST /draft -> persisted cache/fingerprint or conditional claim -> selected fixed KB + bounded scoped public context -> provider -> context recheck/conditional cache completion -> local editable composer -> explicit normal public-message POST. One cache on the existing ticket avoids a draft-history table. Fingerprints cover provider/model/prompt/KB as well as ticket status, book facts and bounded public context. Stale text is labelled; regeneration is explicit. Notes/contact fields are excluded. No paid generation happens in GET, polling or refocus. Server-side cache/dedup complements the UI opening guard, and local edits survive arriving results. CLOSED blocks drafting/sending until explicitly reopened.
 
 Admin Route Handlers delegate transport parsing to http/admin-ticket-handlers, then services enforce ADMIN/self-assignment and repositories perform atomic mutations. All close/reply operations lock the same ticket row. Mutation, updated timestamp and events share one transaction; no-op updates create no events. Admin queue filters/sorts use COALESCE(manual, AI) and existing expression indexes, with bounded pagination and fixed parameterized SQL. Unclassified sorts last.
 
@@ -79,7 +83,7 @@ All date-only values use DATE, application timestamps TIMESTAMPTZ(6), money Deci
 - Indexes support author lists, status/age queue, assignee/status, stable conversation/event cursors and effective AI/manual category/priority.
 - Manual SQL includes `COALESCE(manual_*, ai_*)` indexes and a partial unseen-resolved-reply index. Do not create computed duplicate fields that could drift from manual precedence.
 
-The migration adds Auth FK, checks, required array constraint, expression/partial indexes and privilege hardening beyond Prisma's schema language. Preserve these custom clauses when adding future migrations. Initial DDL is transactional. It has not been applied to hosted Supabase yet.
+The migration adds Auth FK, checks, required array constraint, expression/partial indexes and privilege hardening beyond Prisma's schema language. Preserve these custom clauses when adding future migrations. Initial DDL is transactional; the user applied it during verified setup and later hosted preflights validated its checksum.
 
 ## Authentication and authorization model
 
@@ -93,7 +97,7 @@ Browser publishable keys access Auth, not application tables. Migration revokes 
 
 Sessions use SSR HTTP-only, SameSite=Lax cookies, Secure on HTTPS. Proxy refreshes sessions before rendering, forwards changed cookies into the request and copies chunks/deletions onto the response. It does not authorize access: pages/APIs independently verify identity and DB role. Read-only Server Components rely on proxy cookie persistence. Login/logout require the configured Origin; JSON input is strict and capped at 16 KiB. API responses are no-store. Tokens never enter API responses or browser localStorage.
 
-Logout revokes the current refresh session and clears all cookie chunks even on remote failure. Already-issued JWTs may remain valid until expiry; this is not immediate global revocation. The author page uses scoped queries. Admin overview requires ADMIN. Book detail uses a query containing ownership; invisible books return 404 and author-supplied author filters return 403. Future ticket services must reuse these policies.
+Logout revokes the current refresh session and clears all cookie chunks even on remote failure. Already-issued JWTs may remain valid until expiry; this is not immediate global revocation. Author/ticket services use scoped queries, and admin/AI operations independently check ADMIN. Book detail uses ownership in the query; invisible books return 404 and author-supplied author filters return 403.
 
 ## Trusted provisioning and source import
 

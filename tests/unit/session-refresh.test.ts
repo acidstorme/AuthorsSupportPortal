@@ -5,7 +5,7 @@ vi.mock("@supabase/ssr", () => ({ createServerClient: (_url: string, _key: strin
   mocks.create();
   return { auth: { getUser: async () => { mocks.getUser(); options.cookies.setAll(mocks.nextCookies); return { data: { user: { id: "verified" } }, error: null }; } } };
 } }));
-vi.mock("../../src/server/config/env", () => ({ getServerEnv: () => ({ APP_URL: "https://demo.example", NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "fixture" }) }));
+vi.mock("../../src/server/config/env", () => ({ getCoreServerEnv: () => ({ APP_URL: "https://demo.example", NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "fixture" }) }));
 import { proxy } from "../../src/proxy";
 
 describe("session refresh proxy (mocked Supabase SDK)", () => {

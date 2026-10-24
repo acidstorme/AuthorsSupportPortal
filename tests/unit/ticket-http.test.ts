@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ principal: vi.fn(), list: vi.fn(), find: vi.fn(), findCreation: vi.fn(), ownsBook: vi.fn(), create: vi.fn(), messages: vi.fn(), reply: vi.fn() }));
 vi.mock("../../src/server/auth/current-user", () => ({ getCurrentPrincipal: mocks.principal }));
 vi.mock("../../src/server/repositories/tickets", () => ({ ticketsRepository: mocks }));
+vi.mock("../../src/server/services/ai", () => ({ classifyPersistedTicket: vi.fn() }));
 import { GET as list, POST as create } from "../../src/app/api/tickets/route";
 import { GET as detail } from "../../src/app/api/tickets/[ticketId]/route";
 import { GET as messages, POST as reply } from "../../src/app/api/tickets/[ticketId]/messages/route";

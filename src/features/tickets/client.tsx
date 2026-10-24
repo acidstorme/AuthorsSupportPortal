@@ -57,7 +57,7 @@ export function NewTicket({ books }: { books: { bookId: string; title: string }[
     <Button disabled={mutation.isPending}>{mutation.isPending ? "Creating…" : "Create ticket"}</Button>
   </form>;
 }
-export function TicketConversation({ ticketId }: { ticketId: string }) {
+export function TicketConversation({ ticketId, hideComposer = false }: { ticketId: string; hideComposer?: boolean }) {
   const client = useQueryClient();
   const requestId = useRequestId();
   const [page, setPage] = useState(1);
@@ -73,6 +73,6 @@ export function TicketConversation({ ticketId }: { ticketId: string }) {
       {messages.isPending && <p>Loading messages…</p>}{messages.error && <p role="alert">{messages.error.message}</p>}
       {messages.data && <><ol className="space-y-3">{messages.data.data.map((message) => <li key={message.id} className="rounded-lg border p-4"><p className="text-sm font-medium">{message.sender.displayName} · {message.sender.role === "ADMIN" ? "BookLeaf support" : "Author"}</p><time className="text-xs text-muted-foreground" dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString()}</time><p className="mt-3 whitespace-pre-wrap break-words">{message.body}</p></li>)}</ol>{messages.data.meta.total === 0 && <p>No replies yet.</p>}<Pagination page={page} size={20} total={messages.data.meta.total} change={setPage} /></>}
     </section>
-    {detail.status === "CLOSED" ? <p className="rounded-lg border p-4">This ticket is closed. You can read the conversation, but cannot add replies.</p> : <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); mutation.mutate({ body, requestId: requestId.forContent({ body }) }); }}><label className="block space-y-2"><span>Your reply</span><textarea className={field} required maxLength={8000} rows={4} value={body} disabled={mutation.isPending} onChange={(e) => setBody(e.target.value)} /></label>{detail.status === "RESOLVED" && <p className="text-sm text-muted-foreground">You can reply to this resolved ticket. Replying does not reopen it.</p>}<AttachmentPlaceholder />{mutation.error && <p role="alert">{mutation.error.message}</p>}<Button disabled={mutation.isPending}>{mutation.isPending ? "Sending…" : "Send reply"}</Button></form>}
+    {detail.status === "CLOSED" ? <p className="rounded-lg border p-4">This ticket is closed. You can read the conversation, but cannot add replies.</p> : hideComposer ? null : <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); mutation.mutate({ body, requestId: requestId.forContent({ body }) }); }}><label className="block space-y-2"><span>Your reply</span><textarea className={field} required maxLength={8000} rows={4} value={body} disabled={mutation.isPending} onChange={(e) => setBody(e.target.value)} /></label>{detail.status === "RESOLVED" && <p className="text-sm text-muted-foreground">You can reply to this resolved ticket. Replying does not reopen it.</p>}<AttachmentPlaceholder />{mutation.error && <p role="alert">{mutation.error.message}</p>}<Button disabled={mutation.isPending}>{mutation.isPending ? "Sending…" : "Send reply"}</Button></form>}
   </div>;
 }
