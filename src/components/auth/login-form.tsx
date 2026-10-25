@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -10,22 +10,27 @@ export function LoginForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [error, setError] = useState("");
+  const submitting = useRef(false);
   const [pending, setPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     setError(""); setPending(true);
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: String(form.get("email")).trim(), password: form.get("password") }) });
       const body = await response.json();
-      if (!response.ok) { setError(body.error?.message ?? "Unable to sign in."); return; }
+      if (!response.ok) throw new Error(body.error?.message ?? "Unable to sign in.");
       queryClient.clear();
       router.replace(body.data.redirectTo === "/admin" ? "/admin" : "/author");
       router.refresh();
-    } catch { setError("Unable to reach the sign-in service. Please try again."); }
-    finally { setPending(false); }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to reach the sign-in service. Please try again.");
+      submitting.current = false; setPending(false);
+    }
   }
 
   return <form onSubmit={submit} className="space-y-5">

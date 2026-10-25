@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 
 export default function Home() {
   return (

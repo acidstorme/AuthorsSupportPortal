@@ -1,9 +1,11 @@
 "use client";
-import Link from "next/link";
+import { useExclusiveMutation } from "./use-exclusive-mutation";
+import { ContentSkeleton } from "@/components/page-skeleton";
+import Link from "@/components/navigation-link";
 import { ArrowRight, Clock3 } from "lucide-react";
 import { PriorityBadge, StatusBadge } from "@/components/tickets/status-badge";
 import { useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import type { AdminTicketDto, NoteDto, EventDto } from "@/shared/contracts/admin-tickets";
 import { TicketConversation } from "./client";
@@ -41,25 +43,25 @@ export function AdminQueue() {
       <label className="grid gap-1">Created through (UTC)<input type="date" className={field} value={filters.createdTo} min={filters.createdFrom || undefined} onChange={(e) => change("createdTo", e.target.value)} /></label>
     </form>
     <div className="flex flex-wrap gap-3"><Button variant="outline" onClick={() => { setFilters((previous) => ({ ...previous, status: "", unresolved: "only", sort: "created_asc" })); setPage(1); }}>Oldest unresolved first</Button><Button variant="outline" onClick={() => { setSearch(""); setFilters({ status: "", category: "", priority: "", assignment: "all", attention: "all", sort: "created_desc", search: "", createdFrom: "", createdTo: "", unresolved: "all" }); setPage(1); }}>Reset filters</Button></div>
-    {query.isPending && <p>Loading queue…</p>}{query.error && <p role="alert">{query.error.message}</p>}
+    {query.isPending && <ContentSkeleton label="Loading queue" />}{query.error && <p role="alert">{query.error.message}</p>}
     {query.data && <><div className="flex items-center justify-between text-sm text-muted-foreground"><p>{query.data.meta.total} tickets in this view</p><span>Latest activity, in one place</span></div><ul className="space-y-5">{query.data.data.map((ticket) => <li key={ticket.id}><Link href={`/admin/tickets/${ticket.id}`} className="ticket-card group"><div className="flex flex-wrap items-center gap-3"><StatusBadge status={ticket.status} /><PriorityBadge priority={ticket.priority} />{ticket.needsAttention && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-950">New author reply after resolution</span>}</div><div className="mt-4 flex items-start justify-between gap-4"><h3 className="min-w-0 break-words text-lg font-semibold group-hover:text-primary">{ticket.subject}</h3><ArrowRight className="mt-1 shrink-0 text-primary" size={18} aria-hidden="true" /></div><p className="mt-2 break-words text-sm">{ticket.author.name} <span className="text-muted-foreground">({ticket.author.authorId}) · {ticket.book?.title ?? "General inquiry"}</span></p><div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted-foreground"><span>{ticket.category ? categories[ticket.category] : "Awaiting triage"} · {ticket.assignedTo?.displayName ?? "Unassigned"}</span><span className="inline-flex items-center gap-1.5"><Clock3 size={13} aria-hidden="true" />Created <time dateTime={ticket.createdAt}>{new Date(ticket.createdAt).toLocaleString()}</time></span></div></Link></li>)}</ul>{query.data.meta.total === 0 && <p className="empty-state">No tickets match these filters.</p>}<Pages page={page} total={query.data.meta.total} change={setPage} /></>}
   </section>;
 }
 function History({ ticketId, kind }: { ticketId: string; kind: "notes" | "events" }) {
   const [page, setPage] = useState(1);
   const query = useQuery({ queryKey: ["admin-history", ticketId, kind, page], queryFn: () => request<Page<NoteDto | EventDto>>(`/api/tickets/${ticketId}/${kind}?page=${page}&pageSize=20`), refetchInterval: 5000 });
-  return <section className="space-y-3"><h2 className="text-xl font-semibold">{kind === "notes" ? "Private admin notes" : "Audit history"}</h2>{query.isPending && <p>Loading…</p>}{query.error && <p role="alert">{query.error.message}</p>}{query.data && <><ul className="space-y-2">{query.data.data.map((item) => <li key={item.id} className="rounded border p-3 text-sm">{"body" in item ? <><p className="font-medium">{item.creator.displayName} · Private</p><p className="whitespace-pre-wrap break-words">{item.body}</p></> : <><p className="font-medium">{item.type} · {item.actor?.displayName ?? "System"}</p>{item.metadata !== null && <pre className="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(item.metadata, null, 2)}</pre>}</>}<time className="text-xs text-muted-foreground" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString()}</time></li>)}</ul>{query.data.meta.total === 0 && <p>No {kind} yet.</p>}<Pages page={page} total={query.data.meta.total} change={setPage} /></>}</section>;
+  return <section className="space-y-3"><h2 className="text-xl font-semibold">{kind === "notes" ? "Private admin notes" : "Audit history"}</h2>{query.isPending && <ContentSkeleton label={`Loading ${kind}`} count={2} />}{query.error && <p role="alert">{query.error.message}</p>}{query.data && <><ul className="space-y-2">{query.data.data.map((item) => <li key={item.id} className="rounded border p-3 text-sm">{"body" in item ? <><p className="font-medium">{item.creator.displayName} · Private</p><p className="whitespace-pre-wrap break-words">{item.body}</p></> : <><p className="font-medium">{item.type} · {item.actor?.displayName ?? "System"}</p>{item.metadata !== null && <pre className="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(item.metadata, null, 2)}</pre>}</>}<time className="text-xs text-muted-foreground" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString()}</time></li>)}</ul>{query.data.meta.total === 0 && <p>No {kind} yet.</p>}<Pages page={page} total={query.data.meta.total} change={setPage} /></>}</section>;
 }
 export function AdminTicket({ ticketId, adminId }: { ticketId: string; adminId: string }) {
   const client = useQueryClient();
   const [note, setNote] = useState("");
   const noteRequest = useRef<{ body: string; id: string } | null>(null);
   const query = useQuery({ queryKey: ["admin-ticket", ticketId], queryFn: () => request<{ data: AdminTicketDto }>(`/api/admin/tickets/${ticketId}`), refetchInterval: 5000 });
-  const mutation = useMutation({ mutationFn: ({ suffix = "", method, body }: { suffix?: string; method: string; body?: unknown }) => request(`/api/tickets/${ticketId}${suffix}`, method, body), onSuccess: async (_data, variables) => {
+  const mutation = useExclusiveMutation({ mutationFn: ({ suffix = "", method, body }: { suffix?: string; method: string; body?: unknown }) => request(`/api/tickets/${ticketId}${suffix}`, method, body), onSuccess: async (_data, variables) => {
     if (variables.suffix === "/notes") { setNote(""); noteRequest.current = null; }
     await Promise.all([client.invalidateQueries({ queryKey: ["admin-ticket", ticketId] }), client.invalidateQueries({ queryKey: ["admin-history", ticketId] }), client.invalidateQueries({ queryKey: ["ticket", ticketId] }), client.invalidateQueries({ queryKey: ["admin-queue"] })]);
   } });
-  if (query.isPending) return <p>Loading ticket…</p>;
+  if (query.isPending) return <ContentSkeleton label="Loading ticket" />;
   if (query.error) return <p role="alert">{query.error.message}</p>;
   const ticket = query.data!.data;
   const busy = mutation.isPending;
@@ -70,11 +72,12 @@ export function AdminTicket({ ticketId, adminId }: { ticketId: string; adminId: 
     <p className="text-sm text-muted-foreground">AI classification: {ticket.aiStatus} · {ticket.aiProvider === "MOCK" ? "MOCK deterministic test mode" : ticket.aiProvider ?? "No provider result"} · {ticket.aiModel ?? "—"}{ticket.aiErrorCode ? ` · ${ticket.aiErrorCode}` : ""}. Manual overrides always take precedence.</p>
     <Button variant="outline" disabled={busy} onClick={() => mutation.mutate({ suffix: "/classification", method: "POST", body: {} })}>Retry AI classification</Button>
     {ticket.needsAttention && <div className="space-y-3 rounded border border-amber-300 p-3"><p>A new author reply arrived after resolution. Review the conversation before acknowledging it.</p><Button disabled={busy} variant="outline" onClick={() => mutation.mutate({ suffix: "/acknowledge", method: "POST", body: { observedReplyAt: ticket.resolvedAuthorReplyAt } })}>Mark this author reply reviewed</Button></div>}
+    {busy && <p role="status">Saving changes…</p>}
     {mutation.error && <p role="alert">{mutation.error.message}</p>}
   </section>
   <TicketConversation ticketId={ticketId} hideComposer />
   <AIComposer key={ticketId} ticketId={ticketId} closed={ticket.status === "CLOSED"} />
   <History ticketId={ticketId} kind="notes" />
-  <form className="surface space-y-3 p-5" onSubmit={(e) => { e.preventDefault(); if (noteRequest.current?.body !== note) noteRequest.current = { body: note, id: crypto.randomUUID() }; mutation.mutate({ suffix: "/notes", method: "POST", body: { body: note, requestId: noteRequest.current!.id } }); }}><label className="grid gap-2">New private admin note<textarea className={field} value={note} rows={4} maxLength={8000} required disabled={busy} onChange={(e) => setNote(e.target.value)} /></label><p className="text-sm text-muted-foreground">Only administrators can read this note. It is separate from the public conversation.</p><Button disabled={busy}>Add private note</Button></form>
+  <form className="surface space-y-3 p-5" onSubmit={(e) => { e.preventDefault(); if (noteRequest.current?.body !== note) noteRequest.current = { body: note, id: crypto.randomUUID() }; mutation.mutate({ suffix: "/notes", method: "POST", body: { body: note, requestId: noteRequest.current!.id } }); }}><label className="grid gap-2">New private admin note<textarea className={field} value={note} rows={4} maxLength={8000} required disabled={busy} onChange={(e) => setNote(e.target.value)} /></label><p className="text-sm text-muted-foreground">Only administrators can read this note. It is separate from the public conversation.</p><Button disabled={busy}>{busy && mutation.variables?.suffix === "/notes" ? "Adding note…" : "Add private note"}</Button></form>
   <History ticketId={ticketId} kind="events" /></div>;
 }
