@@ -20,6 +20,7 @@ try {
     book: null, assignedTo: null, manualCategory: null, manualPriority: null, aiCategory: null, aiPriority: null, aiStatus: "PENDING", aiProvider: null, aiModel: null, aiErrorCode: null, needsAttention: false, resolvedAuthorReplyAt: null };
   const page = await context.newPage();
   let draftCalls = 0;
+  let savedResponse: string | null = null;
   let holdNext = false;
   let release: (() => void) | undefined;
   const generated = (number: number) => `Generated response ${number}. ${"Detailed response text. ".repeat(30)}\n\nNext steps for review.`;
@@ -28,8 +29,10 @@ try {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/draft")) {
       const current = ++draftCalls;
+      const cached = savedResponse !== null && !route.request().postDataJSON().regenerate;
       if (holdNext) { holdNext = false; await new Promise<void>((resolve) => { release = resolve; }); }
-      await respond(route, { data: { text: generated(current), provider: "MOCK", model: "browser-fixture", generatedAt: new Date().toISOString(), cached: false, stale: false } });
+      savedResponse = cached ? savedResponse : generated(current);
+      await respond(route, { data: { text: savedResponse, provider: "MOCK", model: "browser-fixture", generatedAt: new Date().toISOString(), cached, stale: cached } });
     } else if (/\/(messages|notes|events)$/.test(path)) {
       await respond(route, route.request().method() === "GET" ? { data: [], meta: { page: 1, pageSize: 20, total: 0 } } : { data: { id: "intercepted-message" } });
     } else await respond(route, { data: ticket });
@@ -66,7 +69,33 @@ try {
   await expect.poll(() => Boolean(release)).toBe(true); await editor.fill(""); release!();
   await expect(editor).toHaveValue(generated(6));
   assert.equal(draftCalls, 6);
-  console.log("PASS: empty/after-send autofill, whitespace handling, non-empty edit protection, one-line preview, read-only modal, explicit replacement, Escape, and typing/clearing during generation. All draft/message APIs intercepted; no AI calls or ticket writes.");
+  await page.getByRole("button", { name: "Send reviewed response" }).click();
+  await expect(editor).toHaveValue("");
+  await page.reload();
+  await expect(preview).toBeVisible();
+  await expect(editor).toHaveValue("");
+  await expect(modal).not.toBeVisible();
+  await expect(page.getByText("Saved AI response", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "View", exact: true }).click();
+  await expect(modal).toBeVisible();
+  await expect(modal.getByText("Context changed: review or explicitly regenerate.", { exact: true })).toBeVisible();
+  await modal.getByRole("button", { name: "Close", exact: true }).click();
+  const loadSaved = page.getByRole("button", { name: "Load saved draft / retry", exact: true });
+  await loadSaved.click();
+  await expect(editor).toHaveValue(generated(6));
+  await expect(preview).toHaveCount(0);
+  await editor.fill("Keep these manual edits");
+  await loadSaved.click();
+  await expect(preview).toBeVisible();
+  await expect(editor).toHaveValue("Keep these manual edits");
+  await page.getByRole("button", { name: "View", exact: true }).click();
+  await modal.getByRole("button", { name: "Use generated text in editor" }).click();
+  await expect(editor).toHaveValue(generated(6));
+  await page.reload();
+  await expect(preview).toBeVisible();
+  await expect(editor).toHaveValue("");
+  assert.equal(draftCalls, 10);
+  console.log("PASS: fresh/explicit empty-editor autofill, cached reopen after send, manual edit protection, preview/modal, stale warning, explicit replacement, and typing/clearing during generation. All draft/message APIs intercepted; no AI calls or ticket writes.");
 } catch {
   console.error("Composer browser check failed. Check the local app, configured admin login, CA trust and installed Edge; no credentials printed.");
   process.exitCode = 1;
