@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BookLeaf | Author Support",
-  description: "BookLeaf Author Support & Communication Portal development foundation.",
+  description: "View your books, raise support requests, and stay connected with BookLeaf Publishing.",
 };
 
 export const runtime = "nodejs";

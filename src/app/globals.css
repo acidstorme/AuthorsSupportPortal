@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fcfbf7;
-  --foreground: #202c27;
-  --primary: #24543d;
+  --background: #f3eeeb;
+  --foreground: #202735;
+  --primary: #b93450;
   --primary-foreground: #ffffff;
-  --muted: #f0f0e8;
-  --muted-foreground: #59665d;
-  --border: #dce1d8;
-  --input: #ccd4c9;
-  --ring: #24543d;
-  --radius: 0.625rem;
+  --muted: #fbf0f2;
+  --muted-foreground: #6c6871;
+  --border: #e7deda;
+  --input: #d8cfcc;
+  --ring: #b93450;
+  --radius: 0.75rem;
+  --accent: #f6637b;
 }
 
 @theme inline {
@@ -26,4 +27,26 @@
   --radius-md: var(--radius);
 }
 
-body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+body { background: var(--background); color: var(--foreground); font-family: "Segoe UI", Arial, Helvetica, sans-serif; }
+
+@layer components {
+  .surface { border: 1px solid var(--border); border-radius: 1rem; background: white; box-shadow: 0 4px 6px -4px #39262e0d, 0 14px 36px -20px #39262e33; }
+  .portal-header { border-bottom: 1px solid var(--border); padding-bottom: 2rem; }
+  .brand-mark { display: inline-flex; height: 2.5rem; width: 2.5rem; flex-shrink: 0; align-items: center; justify-content: center; background: var(--accent); color: white; font-size: 2rem; font-weight: 300; }
+  .ticket-card { display: block; border: 1px solid var(--border); border-radius: 1rem; background: white; padding: 1.5rem; box-shadow: 0 3px 4px #39262e06, 0 9px 0 -5px #e7deda, 0 16px 28px -18px #39262e45; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+  .ticket-card:hover { transform: translateY(-3px); border-color: #f3a3b1; box-shadow: 0 5px 8px #39262e08, 0 10px 0 -5px #efd8dd, 0 22px 32px -18px #39262e55; }
+  .ticket-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+  .filter-panel { display: flex; flex-wrap: wrap; gap: 1rem; border: 1px solid var(--border); border-radius: 0.875rem; padding: 1.25rem; background: #ffffffb3; }
+  .filter-panel label { min-width: 0; font-size: 0.8125rem; font-weight: 500; }
+  .filter-panel input, .filter-panel select { margin-top: 0.375rem; max-width: 100%; }
+  .empty-state { border: 1px dashed var(--input); border-radius: 1rem; background: #ffffff99; padding: 2.5rem 1.5rem; text-align: center; color: var(--muted-foreground); }
+}
+
+input:not([type="checkbox"]):not([type="radio"]), select, textarea { background-color: white; transition: border-color 160ms ease, box-shadow 160ms ease; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+input:disabled, select:disabled, textarea:disabled { opacity: 0.6; }
+::selection { background: #fbd5dd; color: #202735; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+  .ticket-card:hover { transform: none; }
+}
