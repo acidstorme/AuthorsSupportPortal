@@ -10,7 +10,7 @@ export function LogoutButton() {
   const submitting = useRef(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  return <div><Button variant="outline" disabled={pending} onClick={async () => {
+  return <div><Button variant="outline" loading={pending} disabled={pending} onClick={async () => {
     if (submitting.current) return;
     submitting.current = true;
     setPending(true); setError("");

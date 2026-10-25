@@ -43,7 +43,7 @@ export function AIComposer({ ticketId, closed }: { ticketId: string; closed: boo
   return <section className="space-y-4 rounded-lg border p-5"><h2 className="text-xl font-semibold">Response draft · admin review required</h2>
     <p className="text-sm text-muted-foreground">AI drafts are suggestions. Check policies and facts, edit as needed, then explicitly send. Nothing is sent automatically. You can always compose a manual reply.</p>
     {metadata && <p className="text-sm font-medium">{metadata.provider === "MOCK" ? "MOCK · deterministic test draft, not real AI" : "OpenAI draft"} · {metadata.model} · {metadata.cached ? "Saved cache" : "Generated now"}{metadata.stale ? " · Context changed: review or explicitly regenerate" : ""}</p>}
-    <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" disabled={closed || draft.isPending || send.isPending} onClick={() => draft.mutate(false)}>{draft.isPending && !draft.variables ? "Loading draft…" : "Load saved draft / retry"}</Button><Button type="button" variant="outline" disabled={closed || draft.isPending || send.isPending} onClick={() => draft.mutate(true)}>{draft.isPending && draft.variables ? "Generating…" : "Regenerate draft"}</Button></div>
+    <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" disabled={closed || draft.isPending || send.isPending} loading={draft.isPending && !draft.variables} onClick={() => draft.mutate(false)}>{draft.isPending && !draft.variables ? "Loading draft…" : "Load saved draft / retry"}</Button><Button type="button" variant="outline" disabled={closed || draft.isPending || send.isPending} loading={draft.isPending && !!draft.variables} onClick={() => draft.mutate(true)}>{draft.isPending && draft.variables ? "Generating…" : "Regenerate draft"}</Button></div>
     {draft.isPending && <p role="status">Preparing draft… You can write manually while waiting.</p>}
     {draft.error && <p role="alert">{draft.error.message} Manual replies remain available.</p>}
     {preview && <section aria-labelledby={previewHeading} className="flex min-w-0 items-center gap-4 rounded-md border bg-muted/30 p-3">
@@ -65,7 +65,7 @@ export function AIComposer({ ticketId, closed }: { ticketId: string; closed: boo
     }}><label className="grid gap-2">Reviewed public response<textarea ref={editor} className="rounded-md border bg-background p-3 text-sm" rows={9} maxLength={8000} required value={body} disabled={closed || send.isPending || draft.isPending} onChange={(e) => updateBody(e.target.value)} /></label>
       {closed && <p>Closed tickets are read-only. Reopen explicitly before drafting or sending.</p>}
       {send.error && <p role="alert">{send.error.message}</p>}{send.isSuccess && <p role="status">Response sent to the public conversation.</p>}
-      <Button disabled={closed || send.isPending || draft.isPending}>{send.isPending ? "Sending…" : "Send reviewed response"}</Button>
+      <Button loading={send.isPending} disabled={closed || send.isPending || draft.isPending}>{send.isPending ? "Sending…" : "Send reviewed response"}</Button>
     </form>
   </section>;
 }

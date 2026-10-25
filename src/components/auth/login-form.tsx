@@ -45,7 +45,7 @@ export function LoginForm() {
       </div>
     </div>
     {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
-    <Button type="submit" disabled={pending} className="w-full">{pending ? "Signing in…" : "Sign in"}</Button>
+    <Button type="submit" loading={pending} disabled={pending} className="w-full">{pending ? "Signing in…" : "Sign in"}</Button>
     <p className="text-sm leading-relaxed text-muted-foreground">Access is provided by the demo administrator. Public registration and password reset are unavailable.</p>
   </form>;
 }
