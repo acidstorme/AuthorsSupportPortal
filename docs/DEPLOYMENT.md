@@ -1,6 +1,6 @@
 # Vercel deployment handoff
 
-Status: The user deployed to Vercel using the existing isolated Supabase project and reported a Prisma TLS trust failure at login. The explicit driver CA fix below passed a local production-mode Prisma query; its execution inside Vercel awaits user redeployment. No deployment or remote environment change was performed by this fix.
+Status (26 October 2026): Live at [https://authors-support-portal.vercel.app/](https://authors-support-portal.vercel.app/), using the existing isolated Supabase assignment project. After the Prisma TLS fix, the user confirmed successful deployment, login and application use. Deployment and remote configuration were performed by the user. The agent's production-mode Prisma checks were executed locally against hosted Supabase; a complete independent deployed acceptance run is not claimed.
 
 ## Files and build
 
@@ -9,10 +9,10 @@ Status: The user deployed to Vercel using the existing isolated Supabase project
 - next.config.ts traces public certs/*.crt into server function artifacts. Local build trace verification confirmed the CA in the login function. Existing Node Route Handlers keep maxDuration=60 for ticket creation/classification/drafting. The [Vercel duration guide](https://vercel.com/docs/functions/configuring-functions/duration) supports per-route maxDuration; confirm the selected account's limits before publication.
 - Choose Node.js **22.x** in Vercel Project Settings (tested locally: 22.17.0); Node 24 is permitted by engines but unverified. Keep the root directory at the repository root. Region should be close to the selected Supabase project; no region is guessed in config.
 
-## Decisions needed after local review
+## Selected deployment and remaining review
 
-1. Vercel account/team and project name; final stable HTTPS production origin.
-2. A separate isolated Supabase demo project (preferred), or explicit approval to reuse the current isolated assignment project. Never silently publish the development database.
+1. Hosting: Vercel. Stable HTTPS production origin: https://authors-support-portal.vercel.app. Set Production APP_URL to this exact origin.
+2. Supabase: user selected the existing isolated assignment project. A separate demo project remains a future isolation improvement.
 3. Real OpenAI mode/model/key or clearly labelled mock demo. Real mode needs account quota and spending monitoring. The current model alias passed a smoke but is listed as deprecated; do not silently replace it.
 4. Whether the Vercel URL is accessible to reviewers without a Vercel team login. Check deployment-protection settings deliberately before sharing.
 
@@ -58,7 +58,7 @@ Remove-Item Env:NODE_EXTRA_CA_CERTS -ErrorAction SilentlyContinue
 npm run db:verify:runtime
 Remove-Item Env:NODE_ENV
 ```
-This checks the restricted database identity and executes `prisma.user.findUnique()` without printing account data or changing records. On 2026-10-24 it passed against hosted Supabase using the bundled CA with startup CA trust unset. It is a production-mode local check, not a claim that the new Vercel deployment has been verified. Trusted migration/provisioning scripts still use their documented workstation CA configuration.
+This checks the restricted database identity and executes `prisma.user.findUnique()` without printing account data or changing records. On 2026-10-24 it passed against hosted Supabase using both bundled CA and environment PEM with startup CA trust unset. These are production-mode local checks. On 2026-10-26 the user separately confirmed successful deployed login/application use. Trusted migration/provisioning scripts still use their documented workstation CA configuration.
 
 In Supabase Auth, keep signup disabled and the Send Email hook active. Set Site URL to the final HTTPS origin and narrow allowed redirects to intended origins. Email/password is the only implemented flow; no invitations/recovery calls are needed.
 
@@ -83,6 +83,6 @@ Git-based deployment can use the same config. A Vercel deployment success alone 
 3. Create a labelled ticket, check category/priority, admin draft cache/provenance, manual edits and explicit send; verify the author sees the reply without refreshing.
 4. Verify date-range/oldest-unresolved controls, private-note isolation, RESOLVED reply attention, CLOSED denial and explicit reopening.
 5. Confirm reviewed function deadlines, absence of raw errors/secrets, no mail/provisioning operations in web runtime, and intended reviewer access.
-6. Add the verified live URL and actual deployment results to README/TESTING. Until then, mark deployment pending.
+6. Keep README/TESTING synchronized with the live URL and actual results. User-confirmed deployment/login is recorded; record the final complete deployed walkthrough separately when performed.
 
 Rollback uses a previously reviewed Vercel deployment. Database migrations are separate and are not automatically rolled back; never reset the hosted database as a web rollback mechanism.

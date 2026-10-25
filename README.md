@@ -2,15 +2,19 @@
 
 A Next.js App Router modular monolith using TypeScript, Tailwind/shadcn UI, Prisma, hosted Supabase Auth/PostgreSQL, Zod, TanStack Query and OpenAI, with deterministic mock mode.
 
-## Current status — Milestone 6 local delivery
+## Live demo and implementation status
+
+**Live demo:** [BookLeaf Author Support Portal](https://authors-support-portal.vercel.app/) · [Sign in](https://authors-support-portal.vercel.app/login)
+
+The user confirmed successful Vercel deployment, login and application use on 26 October 2026. The deployment uses the existing isolated Supabase assignment project. Reviewer author/admin accounts are listed under [Approved demo logins](#approved-demo-logins).
 
 Implemented in code: shared email/password login, logout, server-side session refresh, HTTP-only cookies, verified Auth identity and database role lookup, protected author/admin landing pages, own-book lists and scoped book APIs, trusted author provisioning/two-admin bootstrap, idempotent source import and setup verification.
 
 The user reviewed Milestones 2–5 and the draft-preview UX. Local delivery now includes UTC date filtering, oldest-unresolved triage, real-browser author/admin acceptance, verified exact inventory and the rendered one-page write-up. Real OPENAI and deterministic MOCK providers remain visibly distinguished. See [TESTING](docs/TESTING.md) for exact checks and remaining gaps.
 
-Deployment, uploads and ticket linking remain deferred. New tickets are OPEN; AI failure leaves them available for manual triage. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
+Uploads and ticket linking remain deferred. New tickets are OPEN; AI failure leaves them available for manual triage. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
 
-Vercel is selected and configuration is prepared, but the user requested local review before choosing the public demo's Supabase project. **No live URL, Vercel project creation or publishing is claimed.** The concrete handoff is [DEPLOYMENT](docs/DEPLOYMENT.md).
+Deployment configuration and the verified-TLS solution are documented in [DEPLOYMENT](docs/DEPLOYMENT.md). User-reported deployed results and independently executed local/hosted checks are distinguished in [TESTING](docs/TESTING.md).
 
 ## Prerequisites and first run
 
@@ -129,7 +133,7 @@ Provisioning also checks the reviewed function, restricted runtime connection, s
 
 Use separate projects and credentials. For demo, set `APP_ENV=demo`, HTTPS `APP_URL`, matching Supabase URLs and that project's approval reference. Repeat the SQL/hook configuration for that project, then use the same commands with positional target `demo`. Do not deploy `DIRECT_URL`, service-role credentials, setup acknowledgements or seed passwords to the web runtime.
 
-No deployment/live demo URL is available yet. The user verified hosted provisioning and author/admin sign-ins during Milestone 2 review. The credential table below describes approved isolated-demo configuration; existing passwords are never reset by setup.
+The deployed portal is available at https://authors-support-portal.vercel.app/. The user verified hosted provisioning and author/admin sign-ins during Milestone 2 review, and confirmed deployed login/application use after the TLS fix. The credential table below describes approved isolated-demo configuration; existing passwords are never reset by setup.
 
 ## Approved demo logins
 
@@ -214,10 +218,10 @@ Hosted HTTP tests use Playwright's request client and need no downloaded browser
 - **Logout:** clears all local session-cookie chunks and revokes that refresh session. Already issued access JWTs may remain valid until expiry; this is not an application-wide immediate revocation system.
 - **Windows sandbox:** native Next path resolution and Vitest cache operations required elevated tool execution during verification.
 - **Dependency audit:** M1 recorded five high dev-only Next ESLint/glob/braces findings and zero production findings. No new dependency was added in M2; review current advisories before delivery.
-- **Deferred:** R2 attachments, ticket links, full accounting, password recovery/self-registration, deployment. See TESTING for actual hosted results versus mocked tests. Broad live-model accuracy/adversarial evaluation and browser E2E coverage remain delivery work; human review is mandatory.
+- **Deferred:** R2 attachments, ticket links, full accounting, password recovery/self-registration. See TESTING for actual hosted results versus mocked tests. Broad live-model accuracy/adversarial evaluation and broader browser coverage remain future work; human review is mandatory.
 
 ## Documentation
 
 [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [AI design](docs/AI_DESIGN.md) · [Tests/results](docs/TESTING.md) · [Decisions](docs/DECISIONS.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [Vercel handoff](docs/DEPLOYMENT.md) · [Write-up source](docs/WRITEUP.md) · [One-page PDF](docs/WRITEUP.pdf)
 
-Local Milestone 6 work is ready for review. Publication remains pending the chosen Vercel account/project, final HTTPS origin and explicit Supabase demo target; see DEPLOYMENT. Cloudflare R2 and ticket linking remain deferred extensions, not missing core upload requirements.
+The core application is deployed on Vercel using the existing isolated Supabase project; see DEPLOYMENT for configuration and TESTING for verification scope. Cloudflare R2 and ticket linking remain deferred extensions. Before submitting, confirm public repository access, add the evaluator's collaborator email when supplied, and perform the final deployed author-to-admin-to-author AI walkthrough.

@@ -1,8 +1,12 @@
 # Testing and verification
 
+## Live deployment — 26 October 2026
+
+Live URL: [https://authors-support-portal.vercel.app/](https://authors-support-portal.vercel.app/). The user deployed to Vercel using the existing isolated Supabase project and confirmed successful login/application use after the Prisma CA fix. This is user-reported verification, separate from the agent-executed local/hosted checks below. The agent's web fetch could not access the site on this date; no independent deployed browser/HTTP acceptance result is claimed. A final deployed author ticket → AI classification → admin draft/edit/send → author polling walkthrough, including real AI availability, should be recorded separately when completed.
+
 ## Milestone 6 local delivery — 24 October 2026
 
-Scope: local acceptance and Vercel preparation only. The user selected Vercel and explicitly deferred the demo Supabase project decision until local review. No Vercel project was created/linked, no deployment credentials uploaded, no Git push/publication or live URL claimed.
+Historical scope of the 24 October checks: local acceptance and Vercel preparation only. At that time the user deferred the demo Supabase project decision until local review. The agent did not publish or change remote configuration; subsequent user deployment is recorded above.
 
 | Check | Actual result |
 |---|---|
@@ -154,7 +158,7 @@ An optional localhost URL argument supports a separate test port, but the server
 
 The test-only server-only alias permits importing server modules in Vitest; production retains the real import barrier.
 
-## Hosted verification procedure — pending
+## Hosted verification procedure — repeatable setup
 
 1. Configure the isolated project, trusted direct/session DB connection, restricted runtime role and CA trust.
 2. Install scripts/sql/block-auth-emails.sql and activate app.block_demo_auth_email as the Send Email hook in the dashboard.
@@ -177,7 +181,7 @@ Do not create conflicting disposable users in the real demo merely to exercise n
 - Real expiry/refresh timing is not proven by mocked proxy tests or short HTTP sessions.
 - Broader browser/device/accessibility coverage beyond the passed focused Edge editor and author/admin flows.
 - Broad real-model accuracy/adversarial evaluation, long-conversation quality and account-level AI budget enforcement; current live check is one synthetic ISBN case.
-- Live Vercel publication, chosen demo Supabase project, final HTTPS/cookie/origin/DB/AI checks and Node 24 compatibility. The required live demo is not complete until published and verified; see DEPLOYMENT.
+- The live Vercel demo now uses the existing isolated Supabase project; the user confirmed login/application use. Independent deployed HTTPS/cookie/origin/AI acceptance checks and Node 24 compatibility remain unverified; see DEPLOYMENT.
 - A fresh full development-dependency audit was not performed; historical dev-only findings below are not erased by a clean production audit.
 
 ## Historical Milestone 1 and dependency audit
@@ -191,5 +195,5 @@ Source checksum remains 34fd3b03f4b26e68b466a6364c3b7fe2f3884d3d7dc65134b67cac8e
 
 `npm run check` passed: lint, TypeScript, 138 tests across 25 suites, Prisma schema validation and production build. New driver tests verify CA loading from file/raw PEM/escaped PEM, retention of explicit SSL settings through pg parsing, rejection of hostname mismatches, invalid CA failure and rejection of weaker SSL modes. The production login route trace includes the tracked public CA file.
 
-`NODE_ENV=production npm run db:verify:runtime` (PowerShell syntax in DEPLOYMENT.md) passed against hosted Supabase with NODE_EXTRA_CA_CERTS unset, using the actual PrismaPg initialization and restricted role, including `prisma.user.findUnique()`. This command is read-only and logs no user records. Live Vercel verification remains pending user redeployment; configuration logs alone do not establish a successful query.
+`NODE_ENV=production npm run db:verify:runtime` (PowerShell syntax in DEPLOYMENT.md) passed against hosted Supabase with NODE_EXTRA_CA_CERTS unset, using the actual PrismaPg initialization and restricted role, including `prisma.user.findUnique()`. This command is read-only and logs no user records. The user subsequently confirmed successful deployed login/application use on 26 October; configuration logs alone do not establish a successful query.
 

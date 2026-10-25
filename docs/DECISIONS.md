@@ -6,7 +6,7 @@ These decisions reflect the final user instructions, superseding the original ch
 |---|---|---|
 | Next.js modular monolith with Node Route Handlers | Separate Express backend adds deployment/API/session duplication without assignment benefit | Auth/books/tickets/admin/AI implemented |
 | Hosted Supabase only for local integration | Docker/local Supabase workflow removed by final revision; fewer reviewer prerequisites, but needs internet | Hosted safety and AI workflow verified; see TESTING |
-| Separate development/demo projects | Shared project risks test/demo contamination; explicit target and project-reference checks reduce mistakes | Guarded development project configured; deployment pending |
+| Existing isolated Supabase project for the deployed demo | Separate projects remain preferred for isolation; user selected reuse after local review, accepting shared demo/test history | Vercel deployed; user confirmed login/application use on 26 October 2026 |
 | Prisma 7 stable line and pg adapter | Avoid a release candidate; matching client/adapter versions and generated client are locked | Implemented, schema validated |
 | Node 22.17 tested; Node 24 allowed | Matches available runtime and Prisma/Next requirements; Node 24 remains untested here | Engines and .nvmrc recorded |
 | Non-exposed app schema and restricted runtime DB role | Browser table access/RLS through Supabase would duplicate API authorization; Prisma does not inherit end-user identity | Runtime connection/permissions verified with supplied CA |
@@ -34,7 +34,7 @@ These decisions reflect the final user instructions, superseding the original ch
 
 Milestone 6 defines creation-date filters in UTC, with inclusive selected dates and next-midnight exclusion to avoid timestamp/DST ambiguity. The oldest-unresolved shortcut means OPEN/IN_PROGRESS and ascending creation time, preserving other filters. No arbitrary aging SLA or escalation policy is invented. No migration is required.
 
-Vercel was selected for deployment preparation. The user defers selection of the public demo's Supabase project until local review; no project creation, linking, credential upload or publication is authorized by this preparation. Build configuration pins the previously tested clean-install npm version and includes dev build tooling. Setup credentials/migrations never run in cloud build. The one-page write-up remains explicit that deployment is pending.
+Vercel deployment was performed by the user using the existing isolated Supabase project. The user confirmed successful login/application use after the Prisma TLS fix and provided https://authors-support-portal.vercel.app/ on 26 October 2026. Build configuration pins the previously tested clean-install npm version and includes dev build tooling. Setup credentials/migrations never run in cloud build. The one-page write-up now includes the live URL; TESTING distinguishes user-reported deployed results from agent-executed checks.
 
 Migration validation is independent of runtime validation: only APP_ENV, SUPABASE_PROJECT_REF and DIRECT_URL are required, with explicit matching target, project, credentials, app schema and verified TLS. This permits first-time schema creation before the restricted runtime login exists. Runtime and privileged provisioning retain full runtime validation; owner credentials are never accepted for application access. runtime-role.sql requires the migrated tables/enums, followed by runtime configuration and email-hook setup.
 

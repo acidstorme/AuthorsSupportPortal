@@ -1,6 +1,6 @@
 # BookLeaf Portal - Approach and Trade-offs
 
-**Local delivery version. Live deployment awaits project selection and review.**
+**Live demo: https://authors-support-portal.vercel.app/**
 
 The portal is designed as a Next.js modular monolith with separate HTTP, authentication, business-service, repository and AI boundaries. Supabase provides email/password identity and PostgreSQL; Prisma manages the application schema. A single application and hosted-only local integration keep setup practical within four days.
 
@@ -10,4 +10,4 @@ The implementation includes HTTP-only authentication, scoped books, provisioning
 
 Polling and a small fixed Knowledge Base avoid unnecessary infrastructure. Attachments and ticket links are deferred; future attachments will use private Cloudflare R2 storage. Production evolution would add durable asynchronous processing when measured demand justifies it, stronger operational monitoring and broader security/reliability testing.
 
-Tests cover policies, handlers, retries, lifecycle, source integrity and AI failure/cache behavior. Hosted safety, admin/AI workflows, a focused editor browser regression and a real synthetic OpenAI smoke passed. Exact delivery results and limits are documented separately. Broad adversarial model evaluation, larger-scale operations and live Vercel deployment remain explicit follow-up work.
+Tests cover policies, handlers, retries, lifecycle, source integrity and AI failure/cache behavior. Hosted safety, admin/AI workflows, browser flows and a real synthetic OpenAI smoke passed. The user confirmed deployed login and application use after the verified-TLS fix. Exact results and limits are documented separately. Broad adversarial model evaluation and larger-scale operations remain follow-up work.
