@@ -40,7 +40,7 @@ flowchart LR
 - `src/shared`: public-safe configuration, DTOs and utilities. Client modules do not import server runtime configuration.
 - `scripts`: standalone trusted operations. Next.js environment precedence is shared by scripts and Prisma config.
 
-Auth/book services and repositories are implemented. Ticket and AI boundaries remain placeholders. The browser Auth factory was removed: client components call REST endpoints without reading token cookies.
+Auth, book, ticket and AI services/repositories are implemented. The browser Auth factory was removed: client components call REST endpoints without reading token cookies.
 
 ## Entity relationships
 

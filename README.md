@@ -2,6 +2,16 @@
 
 A Next.js App Router modular monolith using TypeScript, Tailwind/shadcn UI, Prisma, hosted Supabase Auth/PostgreSQL, Zod, TanStack Query and OpenAI, with deterministic mock mode.
 
+## Submission overview
+
+- **Local setup:** use Node.js 22.12+ (22.x) or 24.x and npm 10+, install with `npx --yes npm@11.21.1 ci`, copy `.env.example` to `.env.local`, then follow [hosted Supabase setup](#hosted-supabase-setup--only-supported-local-workflow) to configure, migrate and provision an isolated project. Run `npm run dev` and open http://localhost:3000. Local development uses hosted Auth/PostgreSQL; Docker is not required. Use `AI_MODE=mock` without an OpenAI key, or configure `AI_MODE=openai`, `OPENAI_API_KEY` and `OPENAI_MODEL` for paid requests. For a production build, run `npm run build` followed by `npm start`.
+- **Architecture and rationale:** one Next.js application keeps deployment simple; separate HTTP, authorization, service, repository and AI boundaries keep business rules testable. Supabase supplies managed identity/PostgreSQL; Prisma supplies typed data access and migrations. Database ownership constraints, scoped queries and server-side roles protect author data. Polling and a fixed policy KB keep infrastructure proportionate to the assignment. See [architecture](docs/ARCHITECTURE.md) and [decisions](docs/DECISIONS.md).
+- **AI prompt strategy:** classification uses explicit triage rules and a strict category/priority JSON schema. Drafting supplies versioned company policies and scoped book/public-conversation context, with instructions to treat ticket text as untrusted, preserve unknowns and propose rather than invent operational actions. Category/keyword selection retrieves relevant fixed KB sections; uncertain selection supplies the whole small KB. Unsupported questions should lead to clarification or team review, not invented policy. This is prompt guidance, not a guaranteed factuality check; admins review, edit and explicitly send every response. See [AI design](docs/AI_DESIGN.md).
+- **AI error handling:** classification runs after ticket persistence, so provider failure does not lose the ticket. Calls have eight/fifteen-second classification/draft deadlines, no automatic SDK retries, schema/output checks, sanitized errors and per-ticket cooldowns. Draft failures preserve manual support and the previous saved draft. Manual classifications take precedence; fingerprints and conditional writes detect stale drafts/results. Real-provider errors never silently become mock output.
+- **AI cost management:** the configurable default is `gpt-4o-mini`; classification/draft output caps are 150/700 tokens. Selected KB sections, bounded recent conversation, persisted draft reuse, duplicate claims and thirty-second per-ticket cooldowns reduce calls. Polling never generates AI output. Successful real calls log token usage/model/request ID. Current controls suit the demo, but there is no global spend cap or token-aware input ceiling. Production improvements include per-admin/global quotas, daily budget enforcement, token-aware trimming and model evaluation before changing models. See [AI budgets and limitations](docs/AI_DESIGN.md#budgets-observability-and-evaluation).
+- **API documentation:** [API reference](docs/API.md) covers authentication, books, author/admin tickets and AI endpoints, with request/response contracts and errors.
+- **Known limitations and next steps:** attachments and ticket linking are deferred; financial data is a snapshot rather than a payment ledger. Recent AI conversation context is bounded and broad live-model/adversarial evaluation remains outstanding. Production work would add operational monitoring, budget controls, broader security/load testing and durable background processing as demand grows. The [approach note](docs/WRITEUP.md) explains priorities, trade-offs and evolution; [testing](docs/TESTING.md) records verification scope.
+
 ## Live demo and implementation status
 
 **Live demo:** [BookLeaf Author Support Portal](https://authors-support-portal.vercel.app/) · [Sign in](https://authors-support-portal.vercel.app/login)
@@ -167,8 +177,8 @@ Authors land at `/author` and see their identity and books. Both admins land at 
 | DEMO_APPROVED_PROJECT_REF | Explicit approval of an isolated demo project |
 | DEMO_EMAIL_DISABLED_CONFIRMED | false until hook installation AND dashboard activation verified |
 | AI_MODE | mock default (deterministic labelled tests) or openai (real paid calls) |
-| OPENAI_MODEL | Planned default gpt-4o-mini |
-| OPENAI_API_KEY | Required by validation only in openai mode; no M2 AI calls |
+| OPENAI_MODEL | Configurable model; default gpt-4o-mini |
+| OPENAI_API_KEY | Server-only key required in openai mode for classification and drafts |
 
 Only public Supabase URL/key are browser-safe; the M2 client does not instantiate a browser Auth SDK. Tokens are HTTP-only cookies, never returned by login/me APIs or stored in browser localStorage. Do not log secrets or commit environment files. Restart after changes; public build-time changes require a rebuild.
 
@@ -224,4 +234,4 @@ Hosted HTTP tests use Playwright's request client and need no downloaded browser
 
 [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [AI design](docs/AI_DESIGN.md) · [Tests/results](docs/TESTING.md) · [Decisions](docs/DECISIONS.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [Vercel handoff](docs/DEPLOYMENT.md) · [Write-up source](docs/WRITEUP.md) · [One-page PDF](docs/WRITEUP.pdf)
 
-The core application is deployed on Vercel using the existing isolated Supabase project; see DEPLOYMENT for configuration and TESTING for verification scope. Cloudflare R2 and ticket linking remain deferred extensions. Before submitting, confirm public repository access, add the evaluator's collaborator email when supplied, and perform the final deployed author-to-admin-to-author AI walkthrough.
+The core application is deployed on Vercel using the existing isolated Supabase project; see DEPLOYMENT for configuration and TESTING for verification scope. The user confirmed that all final deployed checks and flows work correctly on 26 October 2026. Cloudflare R2 and ticket linking remain deferred extensions. Submission handoff includes public repository access and the evaluator's collaborator email when supplied.
