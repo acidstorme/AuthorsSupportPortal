@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { AdminTicketDto, NoteDto, EventDto } from "@/shared/contracts/admin-tickets";
 import { TicketConversation } from "./client";
 import { AIComposer } from "./ai-composer";
+import { auditDetails, auditTitle } from "./audit-history";
 import { ticketCategoryLabels as categories } from "@/shared/ticket-labels";
 type Page<T> = { data: T[]; meta: { total: number; page: number; pageSize: number } };
 const field = "rounded-md border border-border bg-background p-2 text-sm";
@@ -50,7 +51,7 @@ export function AdminQueue() {
 function History({ ticketId, kind }: { ticketId: string; kind: "notes" | "events" }) {
   const [page, setPage] = useState(1);
   const query = useQuery({ queryKey: ["admin-history", ticketId, kind, page], queryFn: () => request<Page<NoteDto | EventDto>>(`/api/tickets/${ticketId}/${kind}?page=${page}&pageSize=20`), refetchInterval: 5000 });
-  return <section className="space-y-3"><h2 className="text-xl font-semibold">{kind === "notes" ? "Private admin notes" : "Audit history"}</h2>{query.isPending && <ContentSkeleton label={`Loading ${kind}`} count={2} />}{query.error && <p role="alert">{query.error.message}</p>}{query.data && <><ul className="space-y-2">{query.data.data.map((item) => <li key={item.id} className="rounded border p-3 text-sm">{"body" in item ? <><p className="font-medium">{item.creator.displayName} · Private</p><p className="whitespace-pre-wrap break-words">{item.body}</p></> : <><p className="font-medium">{item.type} · {item.actor?.displayName ?? "System"}</p>{item.metadata !== null && <pre className="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(item.metadata, null, 2)}</pre>}</>}<time className="text-xs text-muted-foreground" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString()}</time></li>)}</ul>{query.data.meta.total === 0 && <p>No {kind} yet.</p>}<Pages page={page} total={query.data.meta.total} change={setPage} /></>}</section>;
+  return <section className="space-y-3"><h2 className="text-xl font-semibold">{kind === "notes" ? "Private admin notes" : "Audit history"}</h2>{query.isPending && <ContentSkeleton label={`Loading ${kind}`} count={2} />}{query.error && <p role="alert">{query.error.message}</p>}{query.data && <><ul className="space-y-2">{query.data.data.map((item) => <li key={item.id} className="rounded border p-3 text-sm">{"body" in item ? <><p className="font-medium">{item.creator.displayName} · Private</p><p className="whitespace-pre-wrap break-words">{item.body}</p></> : <><p className="font-medium">{auditTitle(item.type)} · {item.actor?.displayName ?? "System"}</p>{auditDetails(item.type, item.metadata).map((line, index) => <p key={index} className="mt-2 whitespace-pre-wrap break-words">{line}</p>)}</>}<time className="text-xs text-muted-foreground" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString()}</time></li>)}</ul>{query.data.meta.total === 0 && <p>No {kind} yet.</p>}<Pages page={page} total={query.data.meta.total} change={setPage} /></>}</section>;
 }
 export function AdminTicket({ ticketId, adminId }: { ticketId: string; adminId: string }) {
   const client = useQueryClient();

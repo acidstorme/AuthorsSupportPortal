@@ -55,7 +55,24 @@ export const adminTicketsRepository: AdminTicketsRepository = {
     const [data, total] = await getDb().$transaction([
       getDb().ticketEvent.findMany({ where: { ticketId }, include: { actor: { select: { displayName: true } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: (query.page - 1) * query.pageSize, take: query.pageSize }),
       getDb().ticketEvent.count({ where: { ticketId } }),
-    ]); return { data, total };
+    ]);
+    // Resolve legacy assignment IDs in one query so older history is readable too.
+    const assigneeIds = new Set<string>();
+    for (const event of data) {
+      if (event.type !== "ASSIGNMENT_CHANGED" || !event.metadata || typeof event.metadata !== "object" || Array.isArray(event.metadata)) continue;
+      for (const side of ["from", "to"] as const) if (typeof event.metadata[side] === "string") assigneeIds.add(event.metadata[side]);
+    }
+    const admins = assigneeIds.size ? await getDb().user.findMany({ where: { id: { in: [...assigneeIds] } }, select: { id: true, displayName: true } }) : [];
+    const names = new Map(admins.map((admin) => [admin.id, admin.displayName]));
+    return { data: data.map((event) => {
+      if (event.type !== "ASSIGNMENT_CHANGED" || !event.metadata || typeof event.metadata !== "object" || Array.isArray(event.metadata)) return event;
+      const metadata = { ...event.metadata };
+      for (const side of ["from", "to"] as const) {
+        const id = metadata[side];
+        if (typeof id === "string" && typeof metadata[`${side}Name`] !== "string") metadata[`${side}Name`] = names.get(id) ?? "Former administrator";
+      }
+      return { ...event, metadata };
+    }), total };
   },
   mutate(id, actorId, command) {
     return getDb().$transaction(async (tx) => {
