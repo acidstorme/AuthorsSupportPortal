@@ -6,6 +6,12 @@ Milestone 5 implements structured classification, deterministic MOCK and real OP
 
 Configured default remains `gpt-4o-mini`, matching the assignment's inexpensive focused-task suggestion. The [official model page](https://developers.openai.com/api/docs/models/gpt-4o-mini) lists it as deprecated; the user explicitly approved using the existing OPENAI_MODEL setting instead of silently replacing it. On 24 October 2026 the configured alias worked, resolving to gpt-4o-mini-2024-07-18. Future account/model availability is not guaranteed. OPENAI_MODEL is configurable. Classification uses the Responses API with strict JSON schema via the installed SDK's zodTextFormat/parse helper, following [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Drafts use Responses text output. Both use store:false, no tools and no SDK retries.
 
+## Choice rationale and key security
+
+OpenAI was chosen because its SDK supports schema-constrained classification and text drafting through one Responses API integration. The configurable `gpt-4o-mini` default fits the assignment's narrow classification and policy-grounded drafting tasks with a low token-cost budget; a larger model was not necessary to demonstrate the workflow. This is a pragmatic implementation choice, not a comparative quality benchmark. A production model change should be evaluated on representative BookLeaf tickets for factual grounding, tone, classification accuracy, latency and cost.
+
+`OPENAI_API_KEY` is read from server environment variables through server-only configuration and used only by the server-only provider module. It has no `NEXT_PUBLIC_` prefix and is not included in client DTOs. Local environment files are Git-ignored; the committed `.env.example` contains an empty key. Deployed credentials belong in the hosting environment, never source code or browser configuration. Provider usage logs contain model/request ID/token counts, not the key or full prompts.
+
 ## Provider contract
 
 AIProvider.classify(context) returns validated category/priority; draft(context) returns text. Providers expose kind/model provenance. Real and deterministic mock implementations share contracts. Admin classification and draft labels distinguish MOCK from OPENAI; live-mode failure never silently becomes mock output. Mock priority/category rules are test heuristics, not AI quality claims.
