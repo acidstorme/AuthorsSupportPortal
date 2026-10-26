@@ -16,11 +16,9 @@ A Next.js App Router modular monolith using TypeScript, Tailwind/shadcn UI, Pris
 
 **Live demo:** [BookLeaf Author Support Portal](https://authors-support-portal.vercel.app/) · [Sign in](https://authors-support-portal.vercel.app/login)
 
-The user confirmed successful Vercel deployment, login and application use on 26 October 2026. The deployment uses the existing isolated Supabase assignment project. Reviewer author/admin accounts are listed under [Approved demo logins](#approved-demo-logins).
+The deployment uses the existing isolated Supabase assignment project. Reviewer author/admin accounts are listed under [Approved demo logins](#approved-demo-logins).
 
 Implemented in code: shared email/password login, logout, server-side session refresh, HTTP-only cookies, verified Auth identity and database role lookup, protected author/admin landing pages, own-book lists and scoped book APIs, trusted author provisioning/two-admin bootstrap, idempotent source import and setup verification.
-
-The user reviewed Milestones 2–5 and the draft-preview UX. Local delivery now includes UTC date filtering, oldest-unresolved triage, real-browser author/admin acceptance, verified exact inventory and the rendered one-page write-up. Real OPENAI and deterministic MOCK providers remain visibly distinguished. See [TESTING](docs/TESTING.md) for exact checks and remaining gaps.
 
 Uploads and ticket linking remain deferred. New tickets are OPEN; AI failure leaves them available for manual triage. The honest attachment placeholder sends/stores nothing. The PDF permits UI-only attachment support; actual upload is a bonus. Future attachment storage is Cloudflare R2.
 
